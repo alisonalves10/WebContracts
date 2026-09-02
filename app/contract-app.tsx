@@ -288,12 +288,12 @@ export default function ContractApp() {
           <div className="top-actions">
             <Button
               variant="outline"
-              size="icon-lg"
               className="header-search-button"
               aria-label="Pesquisar contratos"
               onClick={() => setGlobalSearchOpen(true)}
             >
               <Search />
+              <span>Buscar contratos...</span>
             </Button>
             <Button
               variant="outline"
