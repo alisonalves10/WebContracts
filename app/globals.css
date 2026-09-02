@@ -226,10 +226,15 @@ button {
   align-items: center;
   gap: 10px;
 }
+.header-search-button,
 .notification-button {
   position: relative;
   border-color: var(--border);
   border-radius: 6px;
+}
+.header-search-button:hover {
+  border-color: #c6ccd5;
+  background: var(--muted);
 }
 .notification-button > span {
   position: absolute;
@@ -253,6 +258,106 @@ button {
   font-size: 13px;
   font-weight: 650;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+.global-search-dialog {
+  width: min(620px, calc(100vw - 32px));
+  max-width: 620px;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.global-search-header {
+  gap: 4px;
+  padding: 22px 24px 16px;
+  text-align: left;
+}
+.global-search-field {
+  position: relative;
+  padding: 0 24px 18px;
+}
+.global-search-field > svg {
+  position: absolute;
+  z-index: 1;
+  top: 11px;
+  left: 38px;
+  width: 18px;
+  height: 18px;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+.global-search-field input {
+  height: 42px;
+  padding-left: 42px;
+  border-radius: 7px;
+  font-size: 14px;
+}
+.global-search-results {
+  max-height: 390px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+}
+.global-search-result {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 24px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: white;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+.global-search-result:hover,
+.global-search-result:focus-visible {
+  background: var(--muted);
+  outline: none;
+}
+.global-search-result-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.global-search-result-copy strong,
+.global-search-result-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.global-search-result-copy strong {
+  font-size: 13px;
+  font-weight: 650;
+}
+.global-search-result-copy span,
+.global-search-footer,
+.global-search-empty span {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.global-search-empty {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  padding: 24px;
+  text-align: center;
+}
+.global-search-empty > svg {
+  width: 26px;
+  height: 26px;
+  margin-bottom: 4px;
+  color: var(--muted-foreground);
+}
+.global-search-empty strong {
+  font-size: 13px;
+}
+.global-search-footer {
+  padding: 10px 24px;
+  background: #fafafa;
 }
 .content {
   flex: 1;

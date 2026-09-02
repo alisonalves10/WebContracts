@@ -145,6 +145,8 @@ export default function ContractApp() {
   >('summary');
   const [filter, setFilter] = useState('Todos');
   const [search, setSearch] = useState('');
+  const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
+  const [globalSearch, setGlobalSearch] = useState('');
   const [readIds, setReadIds] = useState<string[]>([]);
   const [notificationFilter, setNotificationFilter] = useState<
     'Não lidas' | 'Todas'
@@ -209,6 +211,25 @@ export default function ContractApp() {
       }),
     [contractItems, filter, search],
   );
+  const globalSearchResults = useMemo(() => {
+    const query = globalSearch.trim().toLocaleLowerCase('pt-BR');
+
+    return contractItems
+      .filter(
+        (contract) =>
+          !query ||
+          `${contract.name} ${contract.vendor} ${contract.id}`
+            .toLocaleLowerCase('pt-BR')
+            .includes(query),
+      )
+      .slice(0, 8);
+  }, [contractItems, globalSearch]);
+
+  const selectGlobalSearchResult = (id: string) => {
+    setGlobalSearchOpen(false);
+    setGlobalSearch('');
+    openContract(id);
+  };
 
   return (
     <main className="app-shell">
@@ -265,6 +286,15 @@ export default function ContractApp() {
             <h1>{pageTitles[view][1]}</h1>
           </div>
           <div className="top-actions">
+            <Button
+              variant="outline"
+              size="icon-lg"
+              className="header-search-button"
+              aria-label="Pesquisar contratos"
+              onClick={() => setGlobalSearchOpen(true)}
+            >
+              <Search />
+            </Button>
             <Button
               variant="outline"
               size="icon-lg"
@@ -386,6 +416,17 @@ export default function ContractApp() {
         </div>
       </section>
 
+      <GlobalSearchDialog
+        open={globalSearchOpen}
+        query={globalSearch}
+        results={globalSearchResults}
+        onQueryChange={setGlobalSearch}
+        onOpenChange={(open) => {
+          setGlobalSearchOpen(open);
+          if (!open) setGlobalSearch('');
+        }}
+        onSelect={selectGlobalSearchResult}
+      />
       <DocumentDialog
         open={previewOpen}
         onOpenChange={setPreviewOpen}
@@ -405,6 +446,75 @@ export default function ContractApp() {
         </output>
       ) : null}
     </main>
+  );
+}
+
+function GlobalSearchDialog({
+  open,
+  query,
+  results,
+  onQueryChange,
+  onOpenChange,
+  onSelect,
+}: {
+  open: boolean;
+  query: string;
+  results: Contract[];
+  onQueryChange: (query: string) => void;
+  onOpenChange: (open: boolean) => void;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="global-search-dialog" showCloseButton={false}>
+        <DialogHeader className="global-search-header">
+          <DialogTitle>Pesquisar contratos</DialogTitle>
+          <DialogDescription>
+            Encontre por contrato, fornecedor ou código.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="global-search-field">
+          <Search aria-hidden="true" />
+          <Input
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Digite para pesquisar..."
+            aria-label="Pesquisar contrato, fornecedor ou código"
+          />
+        </div>
+        <div className="global-search-results" aria-live="polite">
+          {results.length ? (
+            results.map((contract) => (
+              <button
+                type="button"
+                className="global-search-result"
+                key={contract.id}
+                onClick={() => onSelect(contract.id)}
+              >
+                <span className="global-search-result-copy">
+                  <strong>{contract.name}</strong>
+                  <span>
+                    {contract.id} · {contract.vendor}
+                  </span>
+                </span>
+                <Pill tone={toneForStatus(contract.status)}>
+                  {contract.status}
+                </Pill>
+              </button>
+            ))
+          ) : (
+            <div className="global-search-empty">
+              <Search aria-hidden="true" />
+              <strong>Nenhum contrato encontrado</strong>
+              <span>Tente pesquisar com outro nome, fornecedor ou código.</span>
+            </div>
+          )}
+        </div>
+        <div className="global-search-footer">
+          {results.length} {results.length === 1 ? 'resultado' : 'resultados'}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
