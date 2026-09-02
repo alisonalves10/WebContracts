@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Bell,
@@ -30,7 +30,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import {
   Contract,
-  contracts,
+  contracts as seedContracts,
   daysUntil,
   decisionDate,
   formatDate,
@@ -39,6 +39,7 @@ import {
   TODAY,
   users,
 } from './data';
+import { contractPayload, createContract, fetchContracts } from './api';
 
 type View =
   | 'dashboard'
@@ -137,7 +138,8 @@ function toneForCriticality(value: Contract['criticality']): Tone {
 
 export default function ContractApp() {
   const [view, setView] = useState<View>('dashboard');
-  const [selectedId, setSelectedId] = useState(contracts[0].id);
+  const [contractItems, setContractItems] = useState<Contract[]>(seedContracts);
+  const [selectedId, setSelectedId] = useState(seedContracts[0].id);
   const [detailTab, setDetailTab] = useState<
     'summary' | 'documents' | 'history'
   >('summary');
@@ -164,8 +166,18 @@ export default function ContractApp() {
     })),
   );
 
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchContracts(controller.signal)
+      .then((items) => setContractItems(items))
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
+
   const selected =
-    contracts.find((contract) => contract.id === selectedId) ?? contracts[0];
+    contractItems.find((contract) => contract.id === selectedId) ??
+    contractItems[0] ??
+    seedContracts[0];
   const unread = notifications.length - readIds.length;
   const navView = view === 'detail' || view === 'new' ? 'contracts' : view;
   const openContract = (id: string) => {
@@ -180,7 +192,7 @@ export default function ContractApp() {
 
   const filteredContracts = useMemo(
     () =>
-      contracts.filter((contract) => {
+      contractItems.filter((contract) => {
         const query = search.trim().toLocaleLowerCase('pt-BR');
         const matchesSearch =
           !query ||
@@ -195,7 +207,7 @@ export default function ContractApp() {
           (filter === 'Renovação automática' && contract.automatic);
         return matchesSearch && matchesFilter;
       }),
-    [filter, search],
+    [contractItems, filter, search],
   );
 
   return (
@@ -209,7 +221,7 @@ export default function ContractApp() {
           {navItems.map(([key, label, Icon]) => {
             const count =
               key === 'contracts'
-                ? contracts.length
+                ? contractItems.length
                 : key === 'calendar'
                   ? 4
                   : key === 'notifications'
@@ -278,6 +290,7 @@ export default function ContractApp() {
         >
           {view === 'dashboard' && (
             <Dashboard
+              contracts={contractItems}
               openContract={openContract}
               showContracts={() => setView('contracts')}
             />
@@ -285,6 +298,7 @@ export default function ContractApp() {
           {view === 'contracts' && (
             <ContractsView
               contracts={filteredContracts}
+              total={contractItems.length}
               filter={filter}
               search={search}
               onFilter={setFilter}
@@ -314,12 +328,25 @@ export default function ContractApp() {
               onAutoRenew={setAutoRenew}
               onPenalty={setHasPenalty}
               onCancel={() => setView('contracts')}
-              onSave={() => {
-                setView('contracts');
-                showToast(
-                  'Contrato salvo',
-                  'As regras de notificação já foram aplicadas ao novo contrato.',
-                );
+              onSave={async (formData) => {
+                try {
+                  const created = await createContract(
+                    contractPayload(formData, autoRenew, hasPenalty),
+                  );
+                  setContractItems((old) => [...old, created]);
+                  setView('contracts');
+                  showToast(
+                    'Contrato salvo',
+                    'As regras de notificação já foram aplicadas ao novo contrato.',
+                  );
+                } catch (error) {
+                  showToast(
+                    'Não foi possível salvar',
+                    error instanceof Error
+                      ? error.message
+                      : 'Revise os dados e tente novamente.',
+                  );
+                }
               }}
             />
           )}
@@ -337,6 +364,7 @@ export default function ContractApp() {
           )}
           {view === 'calendar' && (
             <CalendarView
+              contracts={contractItems}
               month={month}
               onMonth={setMonth}
               onOpen={openContract}
@@ -381,9 +409,11 @@ export default function ContractApp() {
 }
 
 function Dashboard({
+  contracts,
   openContract,
   showContracts,
 }: {
+  contracts: Contract[];
   openContract: (id: string) => void;
   showContracts: () => void;
 }) {
@@ -554,6 +584,7 @@ function Dashboard({
 
 function ContractsView({
   contracts: items,
+  total,
   filter,
   search,
   onFilter,
@@ -561,6 +592,7 @@ function ContractsView({
   onOpen,
 }: {
   contracts: Contract[];
+  total: number;
   filter: string;
   search: string;
   onFilter: (value: string) => void;
@@ -600,7 +632,7 @@ function ContractsView({
           ))}
         </div>
         <span className="result-count">
-          {items.length} de {contracts.length} contratos
+          {items.length} de {total} contratos
         </span>
       </div>
       <div className="table-card">
@@ -962,14 +994,14 @@ function NewContract({
   onAutoRenew: (value: boolean) => void;
   onPenalty: (value: boolean) => void;
   onCancel: () => void;
-  onSave: () => void;
+  onSave: (formData: FormData) => Promise<void>;
 }) {
   return (
     <form
       className="contract-form"
-      onSubmit={(event) => {
+      onSubmit={async (event) => {
         event.preventDefault();
-        onSave();
+        await onSave(new FormData(event.currentTarget));
       }}
     >
       <FormSection title="Identificação">
@@ -978,16 +1010,25 @@ function NewContract({
           span
           hint="Aparece nas listagens e notificações."
         >
-          <input required placeholder="Ex.: Plataforma de logística" />
+          <input
+            name="name"
+            required
+            placeholder="Ex.: Plataforma de logística"
+          />
         </Field>
         <Field label="Fornecedor">
-          <input required placeholder="Razão social" />
+          <input name="vendor" required placeholder="Razão social" />
         </Field>
         <Field label="CNPJ">
-          <input className="mono" placeholder="00.000.000/0000-00" />
+          <input
+            name="cnpj"
+            required
+            className="mono"
+            placeholder="00.000.000/0000-00"
+          />
         </Field>
         <Field label="Destinado a">
-          <select defaultValue="">
+          <select name="destination" required defaultValue="">
             <option value="" disabled>
               Selecione
             </option>
@@ -1005,7 +1046,7 @@ function NewContract({
           </select>
         </Field>
         <Field label="Criticidade">
-          <select>
+          <select name="criticality">
             <option>Alta</option>
             <option>Média</option>
             <option>Baixa</option>
@@ -1014,10 +1055,10 @@ function NewContract({
       </FormSection>
       <FormSection title="Vigência e renovação">
         <Field label="Início da vigência">
-          <input type="date" />
+          <input name="start" required type="date" />
         </Field>
         <Field label="Fim da vigência">
-          <input type="date" />
+          <input name="end" required type="date" />
         </Field>
         <SwitchBlock
           title="Contrato possui renovação automática?"
@@ -1027,10 +1068,10 @@ function NewContract({
         />
         {autoRenew ? (
           <Field label="Renova por">
-            <select>
-              <option>12 meses</option>
-              <option>24 meses</option>
-              <option>6 meses</option>
+            <select name="renewalPeriodMonths">
+              <option value="12">12 meses</option>
+              <option value="24">24 meses</option>
+              <option value="6">6 meses</option>
             </select>
           </Field>
         ) : null}
@@ -1039,11 +1080,17 @@ function NewContract({
           hint="A data-limite de decisão é calculada automaticamente."
         >
           <div className="compound-input">
-            <input type="number" defaultValue="60" />
-            <select>
-              <option>dias corridos</option>
-              <option>dias úteis</option>
-              <option>meses</option>
+            <input
+              name="notice"
+              required
+              min="1"
+              type="number"
+              defaultValue="60"
+            />
+            <select name="noticeUnit">
+              <option value="calendar_days">dias corridos</option>
+              <option value="business_days">dias úteis</option>
+              <option value="months">meses</option>
             </select>
           </div>
         </Field>
@@ -1055,13 +1102,17 @@ function NewContract({
         />
         {hasPenalty ? (
           <Field label="Base da multa" span>
-            <input placeholder="Ex.: 30% do valor remanescente" />
+            <input
+              name="penaltyBase"
+              required
+              placeholder="Ex.: 30% do valor remanescente"
+            />
           </Field>
         ) : null}
       </FormSection>
       <FormSection title="Financeiro" three>
         <Field label="Formato de cobrança">
-          <select>
+          <select name="billing">
             <option>Mensal</option>
             <option>Trimestral</option>
             <option>Anual</option>
@@ -1069,10 +1120,10 @@ function NewContract({
           </select>
         </Field>
         <Field label="Valor">
-          <input className="mono" placeholder="R$ 0,00" />
+          <input name="value" required className="mono" placeholder="R$ 0,00" />
         </Field>
         <Field label="Índice de reajuste">
-          <select>
+          <select name="adjustment">
             <option>IPCA</option>
             <option>IGP-M</option>
             <option>INPC</option>
@@ -1080,24 +1131,29 @@ function NewContract({
           </select>
         </Field>
         <Field label="Centro de custo">
-          <input placeholder="CC-0000" />
+          <input
+            name="costCenter"
+            required
+            pattern="CC-[0-9]{4}"
+            placeholder="CC-0000"
+          />
         </Field>
         <Field label="Squad responsável">
-          <input />
+          <input name="squad" required />
         </Field>
         <Field label="Gestor interno">
-          <input />
+          <input name="manager" required />
         </Field>
       </FormSection>
       <FormSection title="Operação e conformidade">
         <Field label="SLA contratado">
-          <input placeholder="Ex.: 99,5% de disponibilidade" />
+          <input name="sla" placeholder="Ex.: 99,5% de disponibilidade" />
         </Field>
         <Field label="Sistemas integrados">
-          <input placeholder="OMS, ERP, CRM..." />
+          <input name="systems" placeholder="OMS, ERP, CRM..." />
         </Field>
         <Field label="Observações de confidencialidade / LGPD" span>
-          <textarea rows={4} />
+          <textarea name="lgpd" rows={4} />
         </Field>
       </FormSection>
       <div className="form-actions">
@@ -1226,10 +1282,12 @@ function NotificationsView({
 }
 
 function CalendarView({
+  contracts,
   month,
   onMonth,
   onOpen,
 }: {
+  contracts: Contract[];
   month: number;
   onMonth: (value: number) => void;
   onOpen: (id: string) => void;
