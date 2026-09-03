@@ -11,7 +11,6 @@ import {
   Eye,
   FileText,
   Gauge,
-  Grid2X2,
   Info,
   Plus,
   Search,
@@ -178,6 +177,24 @@ function Pill({
   tone?: Tone;
 }) {
   return <span className={`status-pill ${tone}`}>{children}</span>;
+}
+
+function ApplicationsIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    >
+      <rect width="7" height="7" x="3" y="3" rx="1" />
+      <rect width="7" height="7" x="14" y="3" rx="1" />
+      <rect width="7" height="7" x="14" y="14" rx="1" />
+      <rect width="7" height="7" x="3" y="14" rx="1" />
+    </svg>
+  );
 }
 
 function toneForStatus(status: Contract['status']): Tone {
@@ -403,7 +420,7 @@ export default function ContractApp() {
                     className="solution-button"
                     aria-label="Aplicativos Webcontinental"
                   >
-                    <Grid2X2 />
+                    <ApplicationsIcon />
                   </Button>
                 }
               />
