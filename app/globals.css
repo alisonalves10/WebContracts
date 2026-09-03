@@ -19,8 +19,8 @@
   --color-border: var(--border);
   --color-input: var(--border);
   --color-ring: var(--primary);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-inter);
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
@@ -61,7 +61,11 @@ body {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, sans-serif;
+  font-family:
+    var(--font-inter),
+    system-ui,
+    -apple-system,
+    sans-serif;
 }
 button {
   font: inherit;
@@ -699,7 +703,7 @@ button {
   height: 22px;
   padding: 0 8px;
   border-radius: 999px;
-  font: 650 10px var(--font-geist-mono);
+  font: 650 10px var(--font-inter);
 }
 .status-pill.danger {
   background: var(--danger-bg);
@@ -736,7 +740,7 @@ button {
 }
 .bar-item strong {
   color: var(--muted-foreground);
-  font: 500 12px var(--font-geist-mono);
+  font: 500 12px var(--font-inter);
 }
 .bar-track {
   height: 6px;
@@ -771,7 +775,7 @@ button {
   width: 48px;
   flex: none;
   color: var(--muted-foreground);
-  font: 500 12px var(--font-geist-mono);
+  font: 500 12px var(--font-inter);
 }
 .deadline-name {
   min-width: 0;
@@ -1065,7 +1069,7 @@ td {
 }
 code,
 .mono {
-  font-family: var(--font-geist-mono), monospace;
+  font-family: var(--font-inter), system-ui, sans-serif;
 }
 .positive {
   color: #1f9d55;
@@ -1299,7 +1303,7 @@ code,
   border-radius: 6px;
   background: var(--soft-blue);
   color: var(--primary);
-  font: 650 9px var(--font-geist-mono);
+  font: 650 9px var(--font-inter);
 }
 .document-copy {
   min-width: 0;
@@ -1524,7 +1528,7 @@ code,
   display: grid;
   place-items: center;
   border-radius: 6px;
-  font: 650 10px var(--font-geist-mono);
+  font: 650 10px var(--font-inter);
 }
 .notification-code.danger {
   background: var(--danger-bg);
@@ -1708,7 +1712,7 @@ code,
   background: var(--soft-blue);
 }
 .calendar-cell > span {
-  font: 650 12px var(--font-geist-mono);
+  font: 650 12px var(--font-inter);
 }
 .calendar-cell.today > span {
   color: var(--primary);
@@ -2000,7 +2004,7 @@ code,
   place-items: center;
   border-radius: 11px;
   color: white;
-  font: 650 12px var(--font-geist-mono);
+  font: 650 12px var(--font-inter);
 }
 .solution-mark.orange {
   background: #ff7a00;
