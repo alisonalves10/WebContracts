@@ -427,9 +427,9 @@ export default function ContractApp() {
 
       <section className="workspace">
         <header className="topbar">
-          <div>
-            <span className="eyebrow">{pageTitles[view][0]}</span>
-            <h1>{pageTitles[view][1]}</h1>
+          <div className="page-heading">
+            <h1>{pageTitles[view][0]}</h1>
+            <span className="page-subtitle">{pageTitles[view][1]}</span>
           </div>
           <div className="top-actions">
             <Button
