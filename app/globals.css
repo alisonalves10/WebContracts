@@ -462,6 +462,154 @@ button {
   border-radius: 999px;
   background: var(--danger);
 }
+.notification-popover {
+  width: min(342px, calc(100vw - 24px));
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #c9ccd1;
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
+}
+.notification-popover-header {
+  min-height: 43px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+.notification-popover-header > strong {
+  color: #161719;
+  font-size: 14px;
+}
+.notification-popover-header > span {
+  min-width: 27px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: white;
+  font-size: 10px;
+  font-weight: 650;
+  text-align: center;
+}
+.notification-popover-header > button {
+  margin-left: auto;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+}
+.notification-popover-header > button:hover,
+.all-notifications-link:hover {
+  text-decoration: underline;
+}
+.notification-popover-list {
+  max-height: 372px;
+  overflow-y: auto;
+}
+.notification-popover-row {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: white;
+  cursor: pointer;
+  text-align: left;
+}
+.notification-popover-row:hover {
+  background: #f9fafb;
+}
+.notification-popover-icon {
+  width: 30px;
+  height: 32px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+}
+.notification-popover-icon svg {
+  width: 14px;
+  height: 14px;
+}
+.notification-popover-icon.danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.notification-popover-icon.warning {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+.notification-popover-icon.info {
+  background: var(--info-bg);
+  color: var(--info);
+}
+.notification-popover-icon.neutral {
+  background: var(--surface);
+  color: var(--muted-foreground);
+}
+.notification-popover-copy {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.notification-popover-copy strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #161719;
+  font-size: 12px;
+  line-height: 16px;
+}
+.notification-popover-copy strong i {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.notification-popover-copy > span {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  line-height: 16px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.notification-popover-copy small {
+  overflow: hidden;
+  color: #1753cc;
+  font-size: 10px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.notification-popover-copy small em {
+  color: #a0a1a3;
+  font-style: normal;
+  font-weight: 400;
+}
+.all-notifications-link {
+  width: 100%;
+  min-height: 37px;
+  border: 0;
+  background: white;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
 .solution-button svg {
   width: 16px;
   height: 16px;

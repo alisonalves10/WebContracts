@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Clock3,
   Download,
   Eye,
   FileText,
@@ -227,6 +228,7 @@ export default function ContractApp() {
   >('summary');
   const [search, setSearch] = useState('');
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
   const [solutionOpen, setSolutionOpen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
   const [readIds, setReadIds] = useState<string[]>([]);
@@ -424,20 +426,88 @@ export default function ContractApp() {
               <Search />
               <span>Buscar contratos...</span>
             </Button>
-            <Button
-              variant="outline"
-              size="icon-lg"
-              className="notification-button"
-              aria-label={
-                unread > 0
-                  ? `Abrir notificações: ${unread} não lida${unread === 1 ? '' : 's'}`
-                  : 'Abrir notificações'
-              }
-              onClick={() => setView('notifications')}
-            >
-              <Bell />
-              {unread > 0 ? <span aria-hidden="true" /> : null}
-            </Button>
+            <Popover open={notificationOpen} onOpenChange={setNotificationOpen}>
+              <PopoverTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    size="icon-lg"
+                    className="notification-button"
+                    aria-label={
+                      unread > 0
+                        ? `Abrir notificações: ${unread} não lida${unread === 1 ? '' : 's'}`
+                        : 'Abrir notificações'
+                    }
+                  >
+                    <Bell />
+                    {unread > 0 ? <span aria-hidden="true" /> : null}
+                  </Button>
+                }
+              />
+              <PopoverContent
+                className="notification-popover"
+                align="end"
+                sideOffset={8}
+              >
+                <div className="notification-popover-header">
+                  <strong>Notificações</strong>
+                  {unread > 0 ? <span>{unread}</span> : null}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setReadIds(notifications.map((item) => item.id))
+                    }
+                  >
+                    Marcar todas como lidas
+                  </button>
+                </div>
+                <div className="notification-popover-list">
+                  {notifications.slice(0, 4).map((item) => {
+                    const read = readIds.includes(item.id);
+                    const NoticeIcon =
+                      item.tone === 'warning' ? Clock3 : AlertTriangle;
+                    return (
+                      <button
+                        type="button"
+                        className="notification-popover-row"
+                        key={item.id}
+                        onClick={() => {
+                          setReadIds((old) => [...new Set([...old, item.id])]);
+                          setNotificationOpen(false);
+                          openContract(item.contract);
+                        }}
+                      >
+                        <span
+                          className={`notification-popover-icon ${item.tone}`}
+                        >
+                          <NoticeIcon aria-hidden="true" />
+                        </span>
+                        <span className="notification-popover-copy">
+                          <strong>
+                            {!read ? <i aria-hidden="true" /> : null}
+                            {item.title}
+                          </strong>
+                          <span>{item.text}</span>
+                          <small>
+                            {item.contract} <em>· {item.when}</em>
+                          </small>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  className="all-notifications-link"
+                  onClick={() => {
+                    setNotificationOpen(false);
+                    setView('notifications');
+                  }}
+                >
+                  Ver todas as notificações
+                </button>
+              </PopoverContent>
+            </Popover>
             <Popover open={solutionOpen} onOpenChange={setSolutionOpen}>
               <PopoverTrigger
                 render={
