@@ -1809,6 +1809,14 @@ code,
 .calendar-toolbar button {
   border-radius: 6px;
 }
+.calendar-toolbar > button {
+  border-color: var(--border);
+  background: #ffffff;
+  color: var(--foreground);
+}
+.calendar-toolbar > button:hover {
+  background: #ffffff;
+}
 .calendar-legend {
   margin-left: auto;
   display: flex;
