@@ -72,15 +72,15 @@ type View =
 type Tone = 'danger' | 'warning' | 'info' | 'success' | 'neutral';
 
 const pageTitles: Record<View, [string, string]> = {
-  dashboard: ['Visão geral', 'Painel de contratos'],
+  dashboard: ['Painel', 'Painel de contratos'],
   contracts: ['Contratos', 'Todos os contratos'],
   detail: ['Contratos', 'Detalhe do contrato'],
   new: ['Contratos', 'Novo contrato'],
   edit: ['Contratos', 'Editar contrato'],
   notifications: ['Notificações', 'Central de notificações'],
   calendar: ['Calendário', 'Vencimentos e prazos'],
-  rules: ['Configurações', 'Regras de notificação'],
-  access: ['Configurações', 'Gestão de acesso'],
+  rules: ['Regras', 'Regras de notificação'],
+  access: ['Acessos', 'Gestão de acesso'],
 };
 
 const navItems = [
