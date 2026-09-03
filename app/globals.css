@@ -199,7 +199,7 @@ button {
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: #4f5051;
+  color: #3f4144;
   cursor: pointer;
   font-family:
     Inter,
@@ -209,12 +209,12 @@ button {
     'Segoe UI',
     sans-serif;
   font-size: 14px;
-  font-weight: 400;
+  font-weight: 500;
   text-align: left;
 }
 .nav-item:hover {
   background: #f9f4f5;
-  color: #4f5051;
+  color: #3f4144;
 }
 .nav-item:hover > span {
   text-decoration: underline;
@@ -232,7 +232,7 @@ button {
 .nav-item svg {
   width: 17px;
   height: 17px;
-  stroke-width: 1.8;
+  stroke-width: 2;
 }
 .nav-item > span:nth-child(2) {
   flex: 1;
