@@ -2088,7 +2088,7 @@ function NotificationsView({
                 </span>
                 <p>{item.text}</p>
                 <code>
-                  {item.contract} · {item.when}
+                  {item.contract} <em>· {item.when}</em>
                 </code>
               </span>
               <i className={read ? 'read' : ''} />
