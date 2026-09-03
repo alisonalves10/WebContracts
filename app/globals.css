@@ -220,7 +220,7 @@ button {
 }
 .nav-item.active {
   background: #accaff;
-  color: var(--primary);
+  color: #0d3080;
 }
 .nav-item svg {
   width: 17px;
