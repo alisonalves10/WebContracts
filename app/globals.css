@@ -317,9 +317,18 @@ button {
   padding-inline: 12px;
   border-color: #d1d5db;
   background: #f9f4f5;
-  color: #6f6b70;
-  font-size: 12px;
+  color: #6b7280;
+  font-size: 13px;
   font-weight: 400;
+  line-height: 20px;
+}
+.header-search-button span {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .header-search-button svg {
   width: 14px;
