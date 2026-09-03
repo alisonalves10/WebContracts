@@ -499,10 +499,10 @@ button {
   padding: 4px 0;
   border: 0;
   background: transparent;
-  color: var(--primary);
+  color: #0b286e;
   cursor: pointer;
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
 }
 .notification-popover-header > button:hover,
 .all-notifications-link:hover {
