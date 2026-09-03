@@ -234,12 +234,13 @@ button {
   border-radius: 6px;
 }
 .header-search-button {
-  width: 216px;
-  height: 32px;
+  width: 240px;
+  height: 36px;
   justify-content: flex-start;
   gap: 8px;
   padding-inline: 12px;
-  background: #faf8f9;
+  border-color: #d1d5db;
+  background: #f9f4f5;
   color: #6f6b70;
   font-size: 12px;
   font-weight: 400;
@@ -608,9 +609,6 @@ button {
 @media (max-width: 1050px) {
   .year-calendar-grid {
     grid-template-columns: repeat(2, minmax(240px, 1fr));
-  }
-  .header-search-button {
-    width: 180px;
   }
   .metrics {
     grid-template-columns: repeat(2, minmax(190px, 1fr));
