@@ -566,8 +566,8 @@ button {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #161719;
-  font-size: 12px;
+  color: #000000;
+  font-size: 13px;
   line-height: 16px;
 }
 .notification-popover-copy strong i {
