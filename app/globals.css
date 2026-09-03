@@ -254,6 +254,18 @@ button {
   background: white;
   color: var(--foreground);
 }
+.notification-button {
+  width: 36px;
+  height: 36px;
+  border-color: #d1d5db;
+  background: #ffffff;
+  color: #6b7280;
+}
+.notification-button:hover {
+  border-color: #c6ccd5;
+  background: #f9fafb;
+  color: #4b5563;
+}
 .notification-button > span {
   position: absolute;
   top: -7px;
