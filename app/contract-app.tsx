@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
@@ -342,8 +343,17 @@ export default function ContractApp() {
     <main className="app-shell">
       <aside className={`sidebar${sidebarCollapsed ? ' collapsed' : ''}`}>
         <div className="brand">
-          <div className="brand-mark">WEBCO</div>
-          <div className="brand-subtitle">Gestão de contratos</div>
+          <Image
+            className="brand-logo"
+            src="/webcontinental-logo.png"
+            alt="Webcontinental"
+            width={28}
+            height={28}
+          />
+          <div className="brand-copy">
+            <div className="brand-mark">Web Contracts</div>
+            <div className="brand-subtitle">Webcontinental</div>
+          </div>
         </div>
         <button
           type="button"

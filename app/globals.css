@@ -115,13 +115,11 @@ button {
   width: 68px;
 }
 .sidebar.collapsed .brand {
+  justify-content: center;
   padding-inline: 8px;
   text-align: center;
 }
-.sidebar.collapsed .brand-mark {
-  font-size: 12px;
-}
-.sidebar.collapsed .brand-subtitle,
+.sidebar.collapsed .brand-copy,
 .sidebar.collapsed .nav-item > span,
 .sidebar.collapsed .user-copy {
   display: none;
@@ -144,16 +142,27 @@ button {
   height: 64px;
   flex: none;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: center;
+  gap: 10px;
   padding: 0 20px;
   border-bottom: 1px solid var(--line);
 }
+.brand-logo {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  object-fit: contain;
+}
+.brand-copy {
+  min-width: 0;
+  flex: 1;
+}
 .brand-mark {
   color: var(--primary);
-  font-size: 17px;
-  font-weight: 750;
-  letter-spacing: 0.06em;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 .brand-subtitle {
   margin-top: 2px;
@@ -730,10 +739,7 @@ button {
     padding-inline: 10px;
     text-align: center;
   }
-  .brand-mark {
-    font-size: 12px;
-  }
-  .brand-subtitle,
+  .brand-copy,
   .nav-item > span:not(.nav-count),
   .nav-count,
   .user-copy {
