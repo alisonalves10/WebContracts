@@ -521,8 +521,10 @@ button {
   border: 0;
   border-bottom: 1px solid var(--line);
   background: #fbfcfe;
+  color: inherit;
   cursor: pointer;
   text-align: left;
+  text-decoration: none;
 }
 .notification-popover-row:hover {
   background: #f4f7fb;
@@ -560,7 +562,6 @@ button {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 .notification-popover-copy strong {
   display: flex;
@@ -577,11 +578,12 @@ button {
   border-radius: 50%;
   background: var(--primary);
 }
-.notification-popover-copy > span {
+.notification-popover-copy > p {
   display: -webkit-box;
+  margin: 3px 0 6px;
   overflow: hidden;
-  color: var(--muted-foreground);
-  font-size: 11px;
+  color: #6d6e70;
+  font-size: 12px;
   line-height: 16px;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;

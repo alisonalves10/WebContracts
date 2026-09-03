@@ -467,11 +467,12 @@ export default function ContractApp() {
                     const NoticeIcon =
                       item.tone === 'warning' ? Clock3 : AlertTriangle;
                     return (
-                      <button
-                        type="button"
+                      <a
+                        href={`#${item.contract}`}
                         className="notification-popover-row"
                         key={item.id}
-                        onClick={() => {
+                        onClick={(event) => {
+                          event.preventDefault();
                           setReadIds((old) => [...new Set([...old, item.id])]);
                           setNotificationOpen(false);
                           openContract(item.contract);
@@ -487,12 +488,12 @@ export default function ContractApp() {
                             {!read ? <i aria-hidden="true" /> : null}
                             {item.title}
                           </strong>
-                          <span>{item.text}</span>
+                          <p>{item.text}</p>
                           <small>
                             {item.contract} <em>· {item.when}</em>
                           </small>
                         </span>
-                      </button>
+                      </a>
                     );
                   })}
                 </div>
