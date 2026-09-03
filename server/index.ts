@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm';
 import { db, closeDatabase } from './db';
 import { env } from './env';
 import { contractRoutes } from './routes/contracts';
+import { notificationRoutes } from './routes/notifications';
 import { userRoutes } from './routes/users';
 
 const app = Fastify({ logger: true });
@@ -18,6 +19,7 @@ app.get('/api/health', async () => {
 });
 
 await app.register(contractRoutes);
+await app.register(notificationRoutes);
 await app.register(userRoutes);
 
 let shuttingDown = false;

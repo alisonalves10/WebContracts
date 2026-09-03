@@ -43,7 +43,6 @@ import {
   decisionDate,
   formatDate,
   money,
-  notifications,
   TODAY,
 } from './data';
 import {
@@ -53,10 +52,17 @@ import {
   createContract,
   fetchContractHistory,
   fetchContracts,
+  fetchNotificationRules,
+  fetchNotifications,
   fetchUsers,
   inviteUser,
+  markAllNotificationsRead,
+  markNotificationRead,
+  NotificationRecord,
+  NotificationRuleRecord,
   renewContract,
   updateContract,
+  updateNotificationRule,
   UserRecord,
 } from './api';
 
@@ -139,39 +145,6 @@ const SECTOR_OPTIONS = [
   'Webresolve',
 ] as const;
 
-const ruleSeed = [
-  [
-    'D-90 / D-60 / D-30 do fim da vigência',
-    'Alerta escalonado conforme a data de término.',
-    true,
-    true,
-  ],
-  [
-    'Prazo de aviso prévio se aproximando',
-    'Dispara 15 dias antes da data-limite de decisão.',
-    true,
-    true,
-  ],
-  [
-    'Renovação automática prestes a ocorrer',
-    'Avisa 7 dias antes da renovação tácita.',
-    true,
-    true,
-  ],
-  [
-    'Reajuste anual aplicado',
-    'Na data de aniversário, com o índice do contrato.',
-    true,
-    false,
-  ],
-  [
-    'Documento obrigatório ausente',
-    'Contrato sem PDF assinado após 5 dias do cadastro.',
-    true,
-    false,
-  ],
-] as const;
-
 function Pill({
   children,
   tone = 'neutral',
@@ -231,7 +204,9 @@ export default function ContractApp() {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [solutionOpen, setSolutionOpen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
-  const [readIds, setReadIds] = useState<string[]>([]);
+  const [notificationItems, setNotificationItems] = useState<
+    NotificationRecord[]
+  >([]);
   const [notificationFilter, setNotificationFilter] = useState<
     'Não lidas' | 'Todas'
   >('Não lidas');
@@ -247,14 +222,7 @@ export default function ContractApp() {
   const [hasPenalty, setHasPenalty] = useState(false);
   const [history, setHistory] = useState<ContractHistoryEntry[]>([]);
   const [userItems, setUserItems] = useState<UserRecord[]>([]);
-  const [rules, setRules] = useState(
-    ruleSeed.map(([title, description, screen, email]) => ({
-      title,
-      description,
-      screen,
-      email,
-    })),
-  );
+  const [rules, setRules] = useState<NotificationRuleRecord[]>([]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -273,6 +241,20 @@ export default function ContractApp() {
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
+    Promise.all([
+      fetchNotifications(controller.signal),
+      fetchNotificationRules(controller.signal),
+    ])
+      .then(([notificationData, ruleData]) => {
+        setNotificationItems(notificationData);
+        setRules(ruleData);
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
     if (view !== 'detail') return;
     fetchContractHistory(selectedId)
       .then(setHistory)
@@ -283,7 +265,7 @@ export default function ContractApp() {
     contractItems.find((contract) => contract.id === selectedId) ??
     contractItems[0] ??
     seedContracts[0];
-  const unread = notifications.length - readIds.length;
+  const unread = notificationItems.filter((item) => !item.readAt).length;
   const navView =
     view === 'detail' || view === 'new' || view === 'edit' ? 'contracts' : view;
   const openContract = (id: string) => {
@@ -454,16 +436,25 @@ export default function ContractApp() {
                   {unread > 0 ? <span>{unread}</span> : null}
                   <button
                     type="button"
-                    onClick={() =>
-                      setReadIds(notifications.map((item) => item.id))
-                    }
+                    onClick={async () => {
+                      try {
+                        setNotificationItems(await markAllNotificationsRead());
+                      } catch (error) {
+                        showToast(
+                          'Não foi possível atualizar',
+                          error instanceof Error
+                            ? error.message
+                            : 'Tente novamente.',
+                        );
+                      }
+                    }}
                   >
                     Marcar todas como lidas
                   </button>
                 </div>
                 <div className="notification-popover-list">
-                  {notifications.slice(0, 4).map((item) => {
-                    const read = readIds.includes(item.id);
+                  {notificationItems.slice(0, 4).map((item) => {
+                    const read = Boolean(item.readAt);
                     const NoticeIcon =
                       item.tone === 'warning' ? Clock3 : AlertTriangle;
                     return (
@@ -471,10 +462,28 @@ export default function ContractApp() {
                         href={`#${item.contract}`}
                         className="notification-popover-row"
                         key={item.id}
-                        onClick={(event) => {
+                        onClick={async (event) => {
                           event.preventDefault();
-                          setReadIds((old) => [...new Set([...old, item.id])]);
                           setNotificationOpen(false);
+                          if (!item.readAt) {
+                            try {
+                              const updated = await markNotificationRead(
+                                item.id,
+                              );
+                              setNotificationItems((old) =>
+                                old.map((current) =>
+                                  current.id === updated.id ? updated : current,
+                                ),
+                              );
+                            } catch (error) {
+                              showToast(
+                                'Não foi possível atualizar',
+                                error instanceof Error
+                                  ? error.message
+                                  : 'Tente novamente.',
+                              );
+                            }
+                          }
                           openContract(item.contract);
                         }}
                       >
@@ -733,12 +742,38 @@ export default function ContractApp() {
           )}
           {view === 'notifications' && (
             <NotificationsView
+              notifications={notificationItems}
               filter={notificationFilter}
-              readIds={readIds}
               onFilter={setNotificationFilter}
-              onReadAll={() => setReadIds(notifications.map((item) => item.id))}
-              onOpen={(id, contract) => {
-                setReadIds((old) => [...new Set([...old, id])]);
+              onReadAll={async () => {
+                try {
+                  setNotificationItems(await markAllNotificationsRead());
+                } catch (error) {
+                  showToast(
+                    'Não foi possível atualizar',
+                    error instanceof Error ? error.message : 'Tente novamente.',
+                  );
+                }
+              }}
+              onOpen={async (id, contract) => {
+                const notification = notificationItems.find(
+                  (item) => item.id === id,
+                );
+                if (notification && !notification.readAt) {
+                  try {
+                    const updated = await markNotificationRead(id);
+                    setNotificationItems((old) =>
+                      old.map((item) => (item.id === id ? updated : item)),
+                    );
+                  } catch (error) {
+                    showToast(
+                      'Não foi possível atualizar',
+                      error instanceof Error
+                        ? error.message
+                        : 'Tente novamente.',
+                    );
+                  }
+                }
                 openContract(contract);
               }}
             />
@@ -765,13 +800,21 @@ export default function ContractApp() {
           {view === 'rules' && (
             <RulesView
               rules={rules}
-              onToggle={(index, channel) =>
-                setRules((old) =>
-                  old.map((rule, i) =>
-                    i === index ? { ...rule, [channel]: !rule[channel] } : rule,
-                  ),
-                )
-              }
+              onToggle={async (id, channel, enabled) => {
+                try {
+                  const updated = await updateNotificationRule(id, {
+                    [channel]: enabled,
+                  });
+                  setRules((old) =>
+                    old.map((rule) => (rule.id === id ? updated : rule)),
+                  );
+                } catch (error) {
+                  showToast(
+                    'Não foi possível atualizar a regra',
+                    error instanceof Error ? error.message : 'Tente novamente.',
+                  );
+                }
+              }}
             />
           )}
           {view === 'access' && (
@@ -2035,20 +2078,20 @@ function SwitchBlock({
 }
 
 function NotificationsView({
+  notifications,
   filter,
-  readIds,
   onFilter,
   onReadAll,
   onOpen,
 }: {
+  notifications: NotificationRecord[];
   filter: 'Não lidas' | 'Todas';
-  readIds: string[];
   onFilter: (value: 'Não lidas' | 'Todas') => void;
-  onReadAll: () => void;
-  onOpen: (id: string, contract: string) => void;
+  onReadAll: () => Promise<void>;
+  onOpen: (id: string, contract: string) => Promise<void>;
 }) {
   const items = notifications.filter(
-    (item) => filter === 'Todas' || !readIds.includes(item.id),
+    (item) => filter === 'Todas' || !item.readAt,
   );
   return (
     <section className="notifications-page">
@@ -2071,7 +2114,7 @@ function NotificationsView({
       </div>
       <div className="card notification-list">
         {items.map((item) => {
-          const read = readIds.includes(item.id);
+          const read = Boolean(item.readAt);
           return (
             <button
               className={`notification-row${read ? ' read' : ''}`}
@@ -2358,13 +2401,12 @@ function RulesView({
   rules,
   onToggle,
 }: {
-  rules: {
-    title: string;
-    description: string;
-    screen: boolean;
-    email: boolean;
-  }[];
-  onToggle: (index: number, channel: 'screen' | 'email') => void;
+  rules: NotificationRuleRecord[];
+  onToggle: (
+    id: number,
+    channel: 'screen' | 'email',
+    enabled: boolean,
+  ) => Promise<void>;
 }) {
   return (
     <section className="rules-page">
@@ -2374,7 +2416,7 @@ function RulesView({
           <span>Em tela</span>
           <span>E-mail</span>
         </div>
-        {rules.map((rule, index) => (
+        {rules.map((rule) => (
           <div className="rule-row" key={rule.title}>
             <div>
               <strong>{rule.title}</strong>
@@ -2383,13 +2425,15 @@ function RulesView({
             <Switch
               className="rule-switch"
               checked={rule.screen}
-              onCheckedChange={() => onToggle(index, 'screen')}
+              onCheckedChange={(checked) =>
+                onToggle(rule.id, 'screen', checked)
+              }
               aria-label={`Notificação em tela: ${rule.title}`}
             />
             <Switch
               className="rule-switch"
               checked={rule.email}
-              onCheckedChange={() => onToggle(index, 'email')}
+              onCheckedChange={(checked) => onToggle(rule.id, 'email', checked)}
               aria-label={`E-mail: ${rule.title}`}
             />
           </div>

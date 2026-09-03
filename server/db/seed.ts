@@ -6,6 +6,7 @@ import {
   contracts,
   holidays,
   notificationRules,
+  notifications,
   users,
 } from './schema';
 import {
@@ -252,6 +253,86 @@ async function seed() {
     .onConflictDoNothing();
 
   await db.update(notificationRules).set({ recipients: ['manager'] });
+
+  const ruleRows = await db
+    .select({ id: notificationRules.id, code: notificationRules.code })
+    .from(notificationRules);
+  const ruleIds = new Map(ruleRows.map((rule) => [rule.code, rule.id]));
+  await db
+    .insert(notifications)
+    .values([
+      {
+        contractId: 'CTR-2026-0142',
+        ruleId: ruleIds.get('notice_deadline'),
+        deduplicationKey: 'notice:CTR-2026-0142:2026-09-01',
+        title: 'Aviso prévio vence hoje • Plataforma de frete inteligente',
+        message:
+          'Renovação automática ativa. Registre a decisão até o fim do dia para evitar renovação tácita por 12 meses.',
+        scheduledAt: new Date('2026-09-01T11:00:00.000Z'),
+        sentAt: new Date('2026-09-01T11:00:00.000Z'),
+        screenSent: true,
+        emailSent: true,
+      },
+      {
+        contractId: 'CTR-2025-0088',
+        ruleId: ruleIds.get('notice_deadline'),
+        deduplicationKey: 'notice:CTR-2025-0088:2026-08-31',
+        title: 'Prazo de aviso expirado • Hub de integração de marketplaces',
+        message:
+          'O aviso prévio de 30 dias venceu em 15/08/2026. Renovação automática em 14/09/2026.',
+        scheduledAt: new Date('2026-08-31T11:00:00.000Z'),
+        sentAt: new Date('2026-08-31T11:00:00.000Z'),
+        screenSent: true,
+        emailSent: true,
+      },
+      {
+        contractId: 'CTR-2025-0203',
+        ruleId: ruleIds.get('contract_end'),
+        deduplicationKey: 'contract-end:CTR-2025-0203:30',
+        title: 'D-30 do fim da vigência • Ferramenta omnichannel',
+        message:
+          'Vigência termina em 30/09/2026. Contrato com multa de 50% do saldo.',
+        scheduledAt: new Date('2026-08-31T11:00:00.000Z'),
+        sentAt: new Date('2026-08-31T11:00:00.000Z'),
+        screenSent: true,
+        emailSent: true,
+      },
+      {
+        contractId: 'CTR-2025-0177',
+        ruleId: ruleIds.get('annual_adjustment'),
+        deduplicationKey: 'adjustment:CTR-2025-0177:2026',
+        title: 'Reajuste anual programado • Backoffice jurídico',
+        message: 'IPCA acumulado de 4,1% será aplicado em 01/12/2026.',
+        scheduledAt: new Date('2026-08-28T11:00:00.000Z'),
+        sentAt: new Date('2026-08-28T11:00:00.000Z'),
+        screenSent: true,
+        emailSent: false,
+      },
+      {
+        contractId: 'CTR-2024-0311',
+        ruleId: ruleIds.get('contract_end'),
+        deduplicationKey: 'contract-end:CTR-2024-0311:90',
+        title: 'D-90 do fim da vigência • Licenças de ERP',
+        message:
+          'Sem renovação automática. Novo aditivo precisa ser negociado até 02/10/2026.',
+        scheduledAt: new Date('2026-08-02T11:00:00.000Z'),
+        sentAt: new Date('2026-08-02T11:00:00.000Z'),
+        screenSent: true,
+        emailSent: true,
+      },
+      {
+        contractId: 'CTR-2026-0160',
+        ruleId: ruleIds.get('missing_document'),
+        deduplicationKey: 'missing-document:CTR-2026-0160:5',
+        title: 'Documento obrigatório ausente • Consultoria de precificação',
+        message: 'Contrato cadastrado há 6 dias sem PDF assinado anexado.',
+        scheduledAt: new Date('2026-08-25T11:00:00.000Z'),
+        sentAt: new Date('2026-08-25T11:00:00.000Z'),
+        screenSent: true,
+        emailSent: false,
+      },
+    ])
+    .onConflictDoNothing();
 }
 
 void seed()

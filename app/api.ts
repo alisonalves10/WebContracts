@@ -122,6 +122,88 @@ export async function inviteUser(input: {
   return body.data;
 }
 
+export type NotificationRuleRecord = {
+  id: number;
+  code: string;
+  title: string;
+  description: string;
+  screen: boolean;
+  email: boolean;
+};
+
+export type NotificationRecord = {
+  id: string;
+  code: string;
+  title: string;
+  text: string;
+  when: string;
+  contract: string;
+  tone: 'danger' | 'warning' | 'info' | 'neutral';
+  readAt: string | null;
+};
+
+export async function fetchNotificationRules(signal?: AbortSignal) {
+  return fetchCollection<NotificationRuleRecord>(
+    '/api/notification-rules',
+    'Não foi possível carregar as regras',
+    signal,
+  );
+}
+
+export async function updateNotificationRule(
+  id: number,
+  patch: { screen?: boolean; email?: boolean },
+) {
+  const response = await fetch(`${API_URL}/api/notification-rules/${id}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  const body = (await response.json()) as ApiResponse<NotificationRuleRecord>;
+  if (!response.ok || !body.data)
+    throw new Error(body.error ?? 'Não foi possível atualizar a regra');
+  return body.data;
+}
+
+export async function fetchNotifications(signal?: AbortSignal) {
+  return fetchCollection<NotificationRecord>(
+    '/api/notifications',
+    'Não foi possível carregar as notificações',
+    signal,
+  );
+}
+
+export async function markNotificationRead(id: string) {
+  const response = await fetch(`${API_URL}/api/notifications/${id}/read`, {
+    method: 'PATCH',
+  });
+  const body = (await response.json()) as ApiResponse<NotificationRecord>;
+  if (!response.ok || !body.data)
+    throw new Error(body.error ?? 'Não foi possível ler a notificação');
+  return body.data;
+}
+
+export async function markAllNotificationsRead() {
+  const response = await fetch(`${API_URL}/api/notifications/read-all`, {
+    method: 'POST',
+  });
+  const body = (await response.json()) as ApiResponse<NotificationRecord[]>;
+  if (!response.ok || !body.data)
+    throw new Error(body.error ?? 'Não foi possível atualizar as notificações');
+  return body.data;
+}
+
+async function fetchCollection<T>(
+  path: string,
+  message: string,
+  signal?: AbortSignal,
+) {
+  const response = await fetch(`${API_URL}${path}`, { signal });
+  const body = (await response.json()) as ApiResponse<T[]>;
+  if (!response.ok || !body.data) throw new Error(body.error ?? message);
+  return body.data;
+}
+
 export function contractPayload(
   formData: FormData,
   automatic: boolean,
