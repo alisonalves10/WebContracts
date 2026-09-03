@@ -463,7 +463,7 @@ button {
   background: var(--danger);
 }
 .notification-popover {
-  width: min(342px, calc(100vw - 24px));
+  width: min(380px, calc(100vw - 24px));
   gap: 0;
   padding: 0;
   overflow: hidden;
