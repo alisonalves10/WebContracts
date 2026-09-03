@@ -28,6 +28,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import {
   Contract,
@@ -389,15 +394,71 @@ export default function ContractApp() {
               <Bell />
               <span>{unread}</span>
             </Button>
-            <Button
-              variant="outline"
-              size="icon-lg"
-              className="solution-button"
-              aria-label="Aplicativos Webcontinental"
-              onClick={() => setSolutionOpen(true)}
-            >
-              <Grid2X2 />
-            </Button>
+            <Popover open={solutionOpen} onOpenChange={setSolutionOpen}>
+              <PopoverTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    size="icon-lg"
+                    className="solution-button"
+                    aria-label="Aplicativos Webcontinental"
+                  >
+                    <Grid2X2 />
+                  </Button>
+                }
+              />
+              <PopoverContent
+                className="solution-popover"
+                align="end"
+                sideOffset={8}
+              >
+                <span className="solution-popover-title">
+                  Ecossistema Webcontinental
+                </span>
+                <div className="solution-grid">
+                  {[
+                    ['WS', 'Web Strategy', 'orange'],
+                    ['WC', 'Web Control', 'sky'],
+                    ['WM', 'Web Maps', 'blue'],
+                    ['WP', 'Web Projects', 'navy'],
+                    ['WT', 'WebContracts', 'contracts'],
+                  ].map(([initials, name, tone]) => (
+                    <button
+                      type="button"
+                      key={name}
+                      className={name === 'WebContracts' ? 'active' : ''}
+                      onClick={() => {
+                        setSolutionOpen(false);
+                        if (name !== 'WebContracts')
+                          showToast(
+                            'Aplicativo indisponível',
+                            `${name} estará disponível em breve.`,
+                          );
+                      }}
+                    >
+                      <span className={`solution-mark ${tone}`}>
+                        {initials}
+                        {name === 'Web Projects' ? <i /> : null}
+                      </span>
+                      <small>{name}</small>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="all-solutions-link"
+                  onClick={() => {
+                    setSolutionOpen(false);
+                    showToast(
+                      'Ecossistema Webcontinental',
+                      'Todos os aplicativos disponíveis estão listados acima.',
+                    );
+                  }}
+                >
+                  Ver todas as soluções
+                </button>
+              </PopoverContent>
+            </Popover>
           </div>
         </header>
 
@@ -624,44 +685,6 @@ export default function ContractApp() {
         }}
         onSelect={selectGlobalSearchResult}
       />
-      <Dialog open={solutionOpen} onOpenChange={setSolutionOpen}>
-        <DialogContent className="solution-dialog" showCloseButton>
-          <DialogHeader>
-            <DialogTitle>Mudar de solução</DialogTitle>
-            <DialogDescription>
-              Escolha uma solução Webcontinental para acessar.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="solution-list">
-            {[
-              ['Gestão de contratos', 'Solução atual'],
-              ['Central financeira', 'Em breve'],
-              ['Marketplace', 'Em breve'],
-              ['Logística', 'Em breve'],
-            ].map(([name, status], index) => (
-              <button
-                type="button"
-                key={name}
-                className={index === 0 ? 'active' : ''}
-                onClick={() => {
-                  setSolutionOpen(false);
-                  if (index > 0)
-                    showToast(
-                      'Solução indisponível',
-                      `${name} estará disponível em breve.`,
-                    );
-                }}
-              >
-                <Grid2X2 />
-                <span>
-                  <strong>{name}</strong>
-                  <small>{status}</small>
-                </span>
-              </button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
       <DocumentDialog
         open={previewOpen}
         onOpenChange={setPreviewOpen}
