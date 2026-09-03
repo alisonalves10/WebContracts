@@ -39,13 +39,23 @@ import {
   TODAY,
   users,
 } from './data';
-import { contractPayload, createContract, fetchContracts } from './api';
+import {
+  cancelContract,
+  ContractHistoryEntry,
+  contractPayload,
+  createContract,
+  fetchContractHistory,
+  fetchContracts,
+  renewContract,
+  updateContract,
+} from './api';
 
 type View =
   | 'dashboard'
   | 'contracts'
   | 'detail'
   | 'new'
+  | 'edit'
   | 'notifications'
   | 'calendar'
   | 'rules'
@@ -57,6 +67,7 @@ const pageTitles: Record<View, [string, string]> = {
   contracts: ['Contratos', 'Todos os contratos'],
   detail: ['Contratos', 'Detalhe do contrato'],
   new: ['Contratos', 'Novo contrato'],
+  edit: ['Contratos', 'Editar contrato'],
   notifications: ['Notificações', 'Central de notificações'],
   calendar: ['Calendário', 'Vencimentos e prazos'],
   rules: ['Configurações', 'Regras de notificação'],
@@ -125,7 +136,9 @@ function toneForStatus(status: Contract['status']): Tone {
     ? 'success'
     : status === 'Em renovação'
       ? 'warning'
-      : 'neutral';
+      : status === 'Cancelado'
+        ? 'danger'
+        : 'neutral';
 }
 
 function toneForCriticality(value: Contract['criticality']): Tone {
@@ -158,6 +171,7 @@ export default function ContractApp() {
   );
   const [autoRenew, setAutoRenew] = useState(true);
   const [hasPenalty, setHasPenalty] = useState(false);
+  const [history, setHistory] = useState<ContractHistoryEntry[]>([]);
   const [rules, setRules] = useState(
     ruleSeed.map(([title, description, recipients, screen, email]) => ({
       title,
@@ -176,12 +190,20 @@ export default function ContractApp() {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    if (view !== 'detail') return;
+    fetchContractHistory(selectedId)
+      .then(setHistory)
+      .catch(() => setHistory([]));
+  }, [selectedId, view]);
+
   const selected =
     contractItems.find((contract) => contract.id === selectedId) ??
     contractItems[0] ??
     seedContracts[0];
   const unread = notifications.length - readIds.length;
-  const navView = view === 'detail' || view === 'new' ? 'contracts' : view;
+  const navView =
+    view === 'detail' || view === 'new' || view === 'edit' ? 'contracts' : view;
   const openContract = (id: string) => {
     setSelectedId(id);
     setDetailTab('summary');
@@ -190,6 +212,24 @@ export default function ContractApp() {
   const showToast = (title: string, text: string) => {
     setToast({ title, text });
     window.setTimeout(() => setToast(null), 3600);
+  };
+  const replaceContract = (contract: Contract) => {
+    setContractItems((items) =>
+      items.map((item) => (item.id === contract.id ? contract : item)),
+    );
+  };
+  const refreshHistory = async (id: string) => {
+    setHistory(await fetchContractHistory(id));
+  };
+  const openNewContract = () => {
+    setAutoRenew(true);
+    setHasPenalty(false);
+    setView('new');
+  };
+  const openEditContract = () => {
+    setAutoRenew(selected.automatic);
+    setHasPenalty(selected.penalty);
+    setView('edit');
   };
 
   const filteredContracts = useMemo(
@@ -308,7 +348,7 @@ export default function ContractApp() {
             <Button
               size="lg"
               className="primary-action"
-              onClick={() => setView('new')}
+              onClick={openNewContract}
             >
               <Plus /> Novo contrato
             </Button>
@@ -339,10 +379,58 @@ export default function ContractApp() {
           {view === 'detail' && (
             <DetailView
               contract={selected}
+              history={history}
               tab={detailTab}
               onTab={setDetailTab}
               onBack={() => setView('contracts')}
               onPreview={() => setPreviewOpen(true)}
+              onEdit={openEditContract}
+              onCancelContract={async () => {
+                if (
+                  !window.confirm(
+                    `Confirma o cancelamento do contrato ${selected.id}?`,
+                  )
+                )
+                  return;
+                try {
+                  const updated = await cancelContract(selected.id);
+                  replaceContract(updated);
+                  await refreshHistory(updated.id);
+                  setDetailTab('history');
+                  showToast(
+                    'Contrato cancelado',
+                    'A ação e o usuário foram registrados no histórico.',
+                  );
+                } catch (error) {
+                  showToast(
+                    'Não foi possível cancelar',
+                    error instanceof Error ? error.message : 'Tente novamente.',
+                  );
+                }
+              }}
+              onRenewContract={async () => {
+                if (
+                  !window.confirm(
+                    `Registrar a renovação do contrato ${selected.id}?`,
+                  )
+                )
+                  return;
+                try {
+                  const updated = await renewContract(selected.id);
+                  replaceContract(updated);
+                  await refreshHistory(updated.id);
+                  setDetailTab('history');
+                  showToast(
+                    'Renovação registrada',
+                    `A nova vigência termina em ${updated.end}.`,
+                  );
+                } catch (error) {
+                  showToast(
+                    'Não foi possível renovar',
+                    error instanceof Error ? error.message : 'Tente novamente.',
+                  );
+                }
+              }}
               onDownload={() =>
                 showToast(
                   'Download iniciado',
@@ -372,6 +460,43 @@ export default function ContractApp() {
                 } catch (error) {
                   showToast(
                     'Não foi possível salvar',
+                    error instanceof Error
+                      ? error.message
+                      : 'Revise os dados e tente novamente.',
+                  );
+                }
+              }}
+            />
+          )}
+          {view === 'edit' && (
+            <NewContract
+              initial={selected}
+              autoRenew={autoRenew}
+              hasPenalty={hasPenalty}
+              onAutoRenew={setAutoRenew}
+              onPenalty={setHasPenalty}
+              onCancel={() => setView('detail')}
+              onSave={async (formData) => {
+                try {
+                  const updated = await updateContract(
+                    selected.id,
+                    contractPayload(
+                      formData,
+                      autoRenew,
+                      hasPenalty,
+                      selected.id,
+                    ),
+                  );
+                  replaceContract(updated);
+                  await refreshHistory(updated.id);
+                  setView('detail');
+                  showToast(
+                    'Contrato atualizado',
+                    'As alterações e o usuário foram registrados no histórico.',
+                  );
+                } catch (error) {
+                  showToast(
+                    'Não foi possível atualizar',
                     error instanceof Error
                       ? error.message
                       : 'Revise os dados e tente novamente.',
@@ -716,6 +841,7 @@ function ContractsView({
     'Vence em 90 dias',
     'Renovação automática',
     'Encerrado',
+    'Cancelado',
   ];
   return (
     <section className="list-page">
@@ -810,18 +936,26 @@ function ContractsView({
 
 function DetailView({
   contract,
+  history,
   tab,
   onTab,
   onBack,
   onPreview,
   onDownload,
+  onEdit,
+  onCancelContract,
+  onRenewContract,
 }: {
   contract: Contract;
+  history: ContractHistoryEntry[];
   tab: 'summary' | 'documents' | 'history';
   onTab: (tab: 'summary' | 'documents' | 'history') => void;
   onBack: () => void;
   onPreview: () => void;
   onDownload: () => void;
+  onEdit: () => void;
+  onCancelContract: () => Promise<void>;
+  onRenewContract: () => Promise<void>;
 }) {
   const deadline = decisionDate(contract);
   const decisionDays = Math.round(
@@ -857,7 +991,7 @@ function DetailView({
         ],
         ['Índice de reajuste', contract.adjustment],
         ['Centro de custo', contract.costCenter],
-        ['Squad responsável', contract.squad],
+        ['Setor responsável', contract.squad],
         ['Gestor interno', contract.manager],
       ],
     ],
@@ -906,44 +1040,12 @@ function DetailView({
       'Anexo',
     ],
   ] as const;
-  const history = [
-    [
-      'Notificação enviada — D-60',
-      'E-mail e alerta em tela para gestor e jurídico.',
-      '01/09/2026 08:00 · Sistema',
-      'info',
-    ],
-    [
-      'Aditivo 02 registrado',
-      'Ampliação de escopo para operação 3P.',
-      '03/03/2026 14:22 · Rafael Coutinho',
-      'success',
-    ],
-    [
-      'Valor reajustado',
-      'R$ 17.650,00 → R$ 18.400,00 (IPCA 4,25%).',
-      '12/11/2025 09:10 · Sistema',
-      'warning',
-    ],
-    [
-      'Prazo de aviso alterado',
-      'De 30 para 60 dias corridos.',
-      '12/11/2025 09:05 · Patrícia Nunes',
-      'neutral',
-    ],
-    [
-      'Contrato cadastrado',
-      'Importado da base jurídica.',
-      '01/11/2024 16:40 · Juliana Prado',
-      'primary',
-    ],
-  ] as const;
   return (
     <section className="detail-page">
       <button className="back-button" type="button" onClick={onBack}>
         <ChevronLeft /> Voltar para contratos
       </button>
-      {decisionDays <= 30 ? (
+      {contract.status !== 'Cancelado' && decisionDays <= 30 ? (
         <div
           className={`deadline-alert ${decisionDays < 0 ? 'danger' : 'warning'}`}
         >
@@ -983,8 +1085,25 @@ function DetailView({
           <Button variant="outline" onClick={onDownload}>
             <Download /> Baixar
           </Button>
-          <Button variant="outline">Registrar renovação</Button>
-          <Button variant="destructive">Cancelar contrato</Button>
+          <Button variant="outline" onClick={onEdit}>
+            Editar contrato
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onRenewContract}
+            disabled={contract.status === 'Cancelado'}
+          >
+            Registrar renovação
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={onCancelContract}
+            disabled={contract.status === 'Cancelado'}
+          >
+            {contract.status === 'Cancelado'
+              ? 'Contrato cancelado'
+              : 'Cancelar contrato'}
+          </Button>
         </div>
       </div>
       <div className="tabs" role="tablist">
@@ -1052,19 +1171,28 @@ function DetailView({
       ) : null}
       {tab === 'history' ? (
         <section className="card history-card">
-          {history.map(([action, detail, when, tone], index) => (
-            <div className="history-item" key={action}>
+          {history.map((entry, index) => (
+            <div className="history-item" key={entry.id}>
               <div className="history-track">
-                <span className={tone} />
+                <span className={entry.tone} />
                 {index < history.length - 1 ? <i /> : null}
               </div>
               <div>
-                <strong>{action}</strong>
-                <p>{detail}</p>
-                <code>{when}</code>
+                <strong>{entry.action}</strong>
+                <p>{entry.detail}</p>
+                <code>
+                  {new Date(entry.occurredAt).toLocaleString('pt-BR')} ·{' '}
+                  {entry.actor}
+                </code>
               </div>
             </div>
           ))}
+          {history.length === 0 ? (
+            <div className="empty-state">
+              <strong>Nenhuma ação registrada</strong>
+              <span>As próximas alterações aparecerão aqui com o usuário.</span>
+            </div>
+          ) : null}
         </section>
       ) : null}
     </section>
@@ -1092,6 +1220,7 @@ function Field({
 }
 
 function NewContract({
+  initial,
   autoRenew,
   hasPenalty,
   onAutoRenew,
@@ -1099,6 +1228,7 @@ function NewContract({
   onCancel,
   onSave,
 }: {
+  initial?: Contract;
   autoRenew: boolean;
   hasPenalty: boolean;
   onAutoRenew: (value: boolean) => void;
@@ -1111,7 +1241,20 @@ function NewContract({
       className="contract-form"
       onSubmit={async (event) => {
         event.preventDefault();
-        await onSave(new FormData(event.currentTarget));
+        const form = event.currentTarget;
+        const formData = new FormData(form);
+        const startValue = formData.get('start');
+        const endValue = formData.get('end');
+        const start = typeof startValue === 'string' ? startValue : '';
+        const end = typeof endValue === 'string' ? endValue : '';
+        const endInput = form.elements.namedItem('end') as HTMLInputElement;
+        endInput.setCustomValidity(
+          start && end && end <= start
+            ? 'O fim da vigência deve ser posterior ao início.'
+            : '',
+        );
+        if (!form.reportValidity()) return;
+        await onSave(formData);
       }}
     >
       <FormSection title="Identificação">
@@ -1123,22 +1266,42 @@ function NewContract({
           <input
             name="name"
             required
+            defaultValue={initial?.name}
             placeholder="Ex.: Plataforma de logística"
           />
         </Field>
         <Field label="Fornecedor">
-          <input name="vendor" required placeholder="Razão social" />
+          <input
+            name="vendor"
+            required
+            defaultValue={initial?.vendor}
+            placeholder="Razão social"
+          />
         </Field>
         <Field label="CNPJ">
           <input
             name="cnpj"
             required
             className="mono"
+            defaultValue={initial?.cnpj}
+            inputMode="numeric"
+            maxLength={18}
+            pattern="\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}"
             placeholder="00.000.000/0000-00"
+            title="Informe os 14 números do CNPJ"
+            onInput={(event) => {
+              event.currentTarget.value = formatCnpjInput(
+                event.currentTarget.value,
+              );
+            }}
           />
         </Field>
         <Field label="Destinado a">
-          <select name="destination" required defaultValue="">
+          <select
+            name="destination"
+            required
+            defaultValue={initial?.destination ?? ''}
+          >
             <option value="" disabled>
               Selecione
             </option>
@@ -1150,13 +1313,17 @@ function NewContract({
               'Logística',
               'Jurídico',
               'Corporativo',
+              'Controladoria',
             ].map((item) => (
               <option key={item}>{item}</option>
             ))}
           </select>
         </Field>
         <Field label="Criticidade">
-          <select name="criticality">
+          <select
+            name="criticality"
+            defaultValue={initial?.criticality ?? 'Alta'}
+          >
             <option>Alta</option>
             <option>Média</option>
             <option>Baixa</option>
@@ -1165,10 +1332,26 @@ function NewContract({
       </FormSection>
       <FormSection title="Vigência e renovação">
         <Field label="Início da vigência">
-          <input name="start" required type="date" />
+          <input
+            name="start"
+            required
+            type="date"
+            min="1900-01-01"
+            max="2100-12-31"
+            defaultValue={toDateInput(initial?.start)}
+            onInput={limitDateYear}
+          />
         </Field>
         <Field label="Fim da vigência">
-          <input name="end" required type="date" />
+          <input
+            name="end"
+            required
+            type="date"
+            min="1900-01-01"
+            max="2100-12-31"
+            defaultValue={toDateInput(initial?.end)}
+            onInput={limitDateYear}
+          />
         </Field>
         <SwitchBlock
           title="Contrato possui renovação automática?"
@@ -1178,7 +1361,10 @@ function NewContract({
         />
         {autoRenew ? (
           <Field label="Renova por">
-            <select name="renewalPeriodMonths">
+            <select
+              name="renewalPeriodMonths"
+              defaultValue={String(initial?.renewalPeriodMonths ?? 12)}
+            >
               <option value="12">12 meses</option>
               <option value="24">24 meses</option>
               <option value="6">6 meses</option>
@@ -1195,9 +1381,12 @@ function NewContract({
               required
               min="1"
               type="number"
-              defaultValue="60"
+              defaultValue={initial?.notice ?? 60}
             />
-            <select name="noticeUnit">
+            <select
+              name="noticeUnit"
+              defaultValue={initial?.noticeUnit ?? 'calendar_days'}
+            >
               <option value="calendar_days">dias corridos</option>
               <option value="business_days">dias úteis</option>
               <option value="months">meses</option>
@@ -1215,6 +1404,7 @@ function NewContract({
             <input
               name="penaltyBase"
               required
+              defaultValue={initial?.penaltyBase}
               placeholder="Ex.: 30% do valor remanescente"
             />
           </Field>
@@ -1222,18 +1412,35 @@ function NewContract({
       </FormSection>
       <FormSection title="Financeiro" three>
         <Field label="Formato de cobrança">
-          <select name="billing">
+          <select name="billing" defaultValue={initial?.billing ?? 'Mensal'}>
             <option>Mensal</option>
             <option>Trimestral</option>
+            <option>Semestral</option>
             <option>Anual</option>
             <option>Por uso / variável</option>
+            <option>Pagamento único</option>
           </select>
         </Field>
         <Field label="Valor">
-          <input name="value" required className="mono" placeholder="R$ 0,00" />
+          <input
+            name="value"
+            required
+            className="mono"
+            inputMode="numeric"
+            defaultValue={formatCurrencyValue(initial?.value)}
+            placeholder="R$ 0,00"
+            onInput={(event) => {
+              event.currentTarget.value = formatCurrencyInput(
+                event.currentTarget.value,
+              );
+            }}
+          />
         </Field>
         <Field label="Índice de reajuste">
-          <select name="adjustment">
+          <select
+            name="adjustment"
+            defaultValue={initial?.adjustment ?? 'IPCA'}
+          >
             <option>IPCA</option>
             <option>IGP-M</option>
             <option>INPC</option>
@@ -1244,36 +1451,90 @@ function NewContract({
           <input
             name="costCenter"
             required
-            pattern="CC-[0-9]{4}"
-            placeholder="CC-0000"
+            maxLength={20}
+            defaultValue={initial?.costCenter}
+            placeholder="Ex.: FIN2026 ou CC-0001"
           />
         </Field>
-        <Field label="Squad responsável">
-          <input name="squad" required />
+        <Field label="Setor responsável">
+          <input
+            name="squad"
+            required
+            maxLength={100}
+            defaultValue={initial?.squad}
+            placeholder="Digite o setor responsável"
+          />
         </Field>
         <Field label="Gestor interno">
-          <input name="manager" required />
+          <input name="manager" required defaultValue={initial?.manager} />
         </Field>
       </FormSection>
       <FormSection title="Operação e conformidade">
         <Field label="SLA contratado">
-          <input name="sla" placeholder="Ex.: 99,5% de disponibilidade" />
+          <input
+            name="sla"
+            defaultValue={initial?.sla}
+            placeholder="Ex.: 99,5% de disponibilidade"
+          />
         </Field>
         <Field label="Sistemas integrados">
-          <input name="systems" placeholder="OMS, ERP, CRM..." />
+          <input
+            name="systems"
+            defaultValue={initial?.systems === '—' ? '' : initial?.systems}
+            placeholder="OMS, ERP, CRM..."
+          />
         </Field>
         <Field label="Observações de confidencialidade / LGPD" span>
-          <textarea name="lgpd" rows={4} />
+          <textarea name="lgpd" rows={4} defaultValue={initial?.lgpd} />
         </Field>
       </FormSection>
       <div className="form-actions">
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="submit">Salvar contrato</Button>
+        <Button type="submit">
+          {initial ? 'Salvar alterações' : 'Salvar contrato'}
+        </Button>
       </div>
     </form>
   );
+}
+
+function formatCnpjInput(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 14);
+  return digits
+    .replace(/^(\d{2})(\d)/, '$1.$2')
+    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/, '.$1/$2')
+    .replace(/(\d{4})(\d)/, '$1-$2');
+}
+
+function formatCurrencyInput(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 16);
+  if (!digits) return '';
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(Number(digits) / 100);
+}
+
+function formatCurrencyValue(value?: number) {
+  if (value === undefined) return '';
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value);
+}
+
+function toDateInput(value?: string) {
+  if (!value) return '';
+  const [day, month, year] = value.split('/');
+  return `${year}-${month}-${day}`;
+}
+
+function limitDateYear(event: React.SyntheticEvent<HTMLInputElement>) {
+  const [year] = event.currentTarget.value.split('-');
+  if (year.length > 4) event.currentTarget.value = '';
 }
 
 function FormSection({

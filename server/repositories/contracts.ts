@@ -1,6 +1,6 @@
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq } from 'drizzle-orm';
 import { db } from '../db';
-import { auditLogs, contracts, holidays } from '../db/schema';
+import { auditLogs, contracts, holidays, users } from '../db/schema';
 import {
   calculateDecisionDeadline,
   ContractInput,
@@ -28,7 +28,7 @@ const statusToApi = {
   active: 'Vigente',
   renewing: 'Em renovação',
   ended: 'Encerrado',
-  cancelled: 'Encerrado',
+  cancelled: 'Cancelado',
 } as const;
 const billingToDb = {
   Mensal: 'monthly',
@@ -48,6 +48,7 @@ const billingToApi = {
 } as const;
 
 type ContractRow = typeof contracts.$inferSelect;
+const currentUserEmail = 'alison@webcontinental.com.br';
 
 export function serializeContract(row: ContractRow) {
   return {
@@ -60,7 +61,9 @@ export function serializeContract(row: ContractRow) {
     end: toBrazilianDate(row.endDate),
     endDate: row.endDate,
     automatic: row.automaticRenewal,
+    renewalPeriodMonths: row.renewalPeriodMonths,
     notice: row.noticeQuantity,
+    noticeUnit: row.noticeUnit,
     penalty: row.cancellationPenalty,
     penaltyBase: row.penaltyBasis ?? '—',
     billing: billingToApi[row.billingFormat],
@@ -96,6 +99,155 @@ export async function findContract(id: string) {
 }
 
 export async function createContract(input: ContractInput) {
+  const actorId = await findCurrentActorId();
+  const values = await contractValues(input);
+
+  return db.transaction(async (transaction) => {
+    const [created] = await transaction
+      .insert(contracts)
+      .values(values)
+      .returning();
+    await transaction.insert(auditLogs).values({
+      actorId,
+      entityType: 'contract',
+      entityId: created.id,
+      action: 'created',
+      after: created,
+    });
+    return serializeContract(created);
+  });
+}
+
+export async function updateContract(id: string, input: ContractInput) {
+  const current = await findContractRow(id);
+  if (!current) return null;
+  const actorId = await findCurrentActorId();
+  const values = await contractValues(input);
+
+  return db.transaction(async (transaction) => {
+    const [updated] = await transaction
+      .update(contracts)
+      .set({ ...values, id, status: current.status, updatedAt: new Date() })
+      .where(eq(contracts.id, id))
+      .returning();
+    await transaction.insert(auditLogs).values({
+      actorId,
+      entityType: 'contract',
+      entityId: id,
+      action: 'updated',
+      before: current,
+      after: updated,
+    });
+    return serializeContract(updated);
+  });
+}
+
+export async function cancelContract(id: string) {
+  const current = await findContractRow(id);
+  if (!current) return null;
+  if (current.status === 'cancelled') return serializeContract(current);
+  const actorId = await findCurrentActorId();
+
+  return db.transaction(async (transaction) => {
+    const [updated] = await transaction
+      .update(contracts)
+      .set({ status: 'cancelled', updatedAt: new Date() })
+      .where(eq(contracts.id, id))
+      .returning();
+    await transaction.insert(auditLogs).values({
+      actorId,
+      entityType: 'contract',
+      entityId: id,
+      action: 'cancelled',
+      before: current,
+      after: updated,
+    });
+    return serializeContract(updated);
+  });
+}
+
+export async function renewContract(id: string) {
+  const current = await findContractRow(id);
+  if (!current) return null;
+  if (current.status === 'cancelled') return null;
+  const actorId = await findCurrentActorId();
+  const months = current.renewalPeriodMonths ?? 12;
+  const newEndDate = new Date(`${current.endDate}T12:00:00Z`);
+  newEndDate.setUTCMonth(newEndDate.getUTCMonth() + months);
+  const endDate = toIsoDate(newEndDate);
+  const decisionDeadline = calculateDecisionDeadline(
+    toBrazilianDate(endDate),
+    current.noticeQuantity,
+    current.noticeUnit,
+  );
+
+  return db.transaction(async (transaction) => {
+    const [updated] = await transaction
+      .update(contracts)
+      .set({
+        endDate,
+        decisionDeadline,
+        status: 'active',
+        updatedAt: new Date(),
+      })
+      .where(eq(contracts.id, id))
+      .returning();
+    await transaction.insert(auditLogs).values({
+      actorId,
+      entityType: 'contract',
+      entityId: id,
+      action: 'renewed',
+      before: current,
+      after: updated,
+    });
+    return serializeContract(updated);
+  });
+}
+
+export async function listContractHistory(id: string) {
+  const rows = await db
+    .select({
+      id: auditLogs.id,
+      action: auditLogs.action,
+      before: auditLogs.before,
+      after: auditLogs.after,
+      createdAt: auditLogs.createdAt,
+      actor: users.name,
+    })
+    .from(auditLogs)
+    .leftJoin(users, eq(auditLogs.actorId, users.id))
+    .where(
+      and(eq(auditLogs.entityType, 'contract'), eq(auditLogs.entityId, id)),
+    )
+    .orderBy(desc(auditLogs.createdAt));
+
+  return rows.map((row) => ({
+    id: row.id,
+    ...historyCopy(row.action, row.before, row.after),
+    actor: row.actor ?? 'Alison Martins',
+    occurredAt: row.createdAt.toISOString(),
+  }));
+}
+
+async function findContractRow(id: string) {
+  const [row] = await db
+    .select()
+    .from(contracts)
+    .where(eq(contracts.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+async function findCurrentActorId() {
+  const [actor] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, currentUserEmail))
+    .limit(1);
+  return actor?.id ?? null;
+}
+
+async function contractValues(input: ContractInput) {
   const holidayRows = await db.select({ date: holidays.date }).from(holidays);
   const holidaySet = new Set(holidayRows.map((holiday) => holiday.date));
   const values: typeof contracts.$inferInsert = {
@@ -135,18 +287,39 @@ export async function createContract(input: ContractInput) {
     integratedSystems: input.systems,
     lgpdNotes: input.lgpd,
   };
+  return values;
+}
 
-  return db.transaction(async (transaction) => {
-    const [created] = await transaction
-      .insert(contracts)
-      .values(values)
-      .returning();
-    await transaction.insert(auditLogs).values({
-      entityType: 'contract',
-      entityId: created.id,
-      action: 'created',
-      after: created,
-    });
-    return serializeContract(created);
-  });
+function historyCopy(action: string, before: unknown, after: unknown) {
+  const beforeContract = before as Partial<ContractRow> | null;
+  const afterContract = after as Partial<ContractRow> | null;
+  if (action === 'created')
+    return {
+      action: 'Contrato cadastrado',
+      detail: 'Registro criado na gestão de contratos.',
+      tone: 'primary' as const,
+    };
+  if (action === 'updated')
+    return {
+      action: 'Contrato editado',
+      detail: 'Os dados cadastrais do contrato foram atualizados.',
+      tone: 'info' as const,
+    };
+  if (action === 'cancelled')
+    return {
+      action: 'Contrato cancelado',
+      detail: 'O contrato foi marcado como cancelado.',
+      tone: 'danger' as const,
+    };
+  if (action === 'renewed')
+    return {
+      action: 'Renovação registrada',
+      detail: `Vigência alterada de ${toBrazilianDate(beforeContract?.endDate ?? '')} para ${toBrazilianDate(afterContract?.endDate ?? '')}.`,
+      tone: 'success' as const,
+    };
+  return {
+    action,
+    detail: 'Ação registrada no contrato.',
+    tone: 'neutral' as const,
+  };
 }

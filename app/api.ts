@@ -28,10 +28,68 @@ export async function createContract(input: Record<string, unknown>) {
   return body.data;
 }
 
+export async function updateContract(
+  id: string,
+  input: Record<string, unknown>,
+) {
+  const response = await fetch(`${API_URL}/api/contracts/${id}`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  const body = (await response.json()) as ApiResponse<Contract>;
+  if (!response.ok || !body.data)
+    throw new Error(body.error ?? 'Não foi possível atualizar o contrato');
+  return body.data;
+}
+
+export async function cancelContract(id: string) {
+  return runContractAction(
+    id,
+    'cancel',
+    'Não foi possível cancelar o contrato',
+  );
+}
+
+export async function renewContract(id: string) {
+  return runContractAction(
+    id,
+    'renew',
+    'Não foi possível registrar a renovação',
+  );
+}
+
+async function runContractAction(id: string, action: string, message: string) {
+  const response = await fetch(`${API_URL}/api/contracts/${id}/${action}`, {
+    method: 'POST',
+  });
+  const body = (await response.json()) as ApiResponse<Contract>;
+  if (!response.ok || !body.data) throw new Error(body.error ?? message);
+  return body.data;
+}
+
+export type ContractHistoryEntry = {
+  id: number;
+  action: string;
+  detail: string;
+  actor: string;
+  occurredAt: string;
+  tone: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+};
+
+export async function fetchContractHistory(id: string) {
+  const response = await fetch(`${API_URL}/api/contracts/${id}/history`);
+  const body = (await response.json()) as ApiResponse<ContractHistoryEntry[]>;
+  if (!response.ok || !body.data)
+    throw new Error(body.error ?? 'Não foi possível carregar o histórico');
+  return body.data;
+}
+
 export function contractPayload(
   formData: FormData,
   automatic: boolean,
   penalty: boolean,
+  existingId?: string,
 ) {
   const text = (name: string) => {
     const value = formData.get(name);
@@ -43,10 +101,12 @@ export function contractPayload(
   };
   const numericValue = text('value')
     .replace(/[^\d,.-]/g, '')
-    .replace('.', '')
+    .replace(/\./g, '')
     .replace(',', '.');
   return {
-    id: `CTR-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`,
+    id:
+      existingId ??
+      `CTR-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`,
     name: text('name'),
     vendor: text('vendor'),
     cnpj: text('cnpj'),

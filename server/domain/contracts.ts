@@ -12,8 +12,8 @@ export const contractInputSchema = z
     destination: z.string().trim().min(1).max(80),
     criticality: z.enum(['Alta', 'Média', 'Baixa']),
     status: z.enum(['Vigente', 'Em renovação', 'Encerrado']).default('Vigente'),
-    start: z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/),
-    end: z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/),
+    start: z.string().refine(isValidBrazilianDate, 'Data de início inválida'),
+    end: z.string().refine(isValidBrazilianDate, 'Data de fim inválida'),
     automatic: z.boolean(),
     renewalPeriodMonths: z.number().int().positive().nullable().default(12),
     notice: z.number().int().positive(),
@@ -32,10 +32,7 @@ export const contractInputSchema = z
     ]),
     value: z.number().nonnegative().nullable(),
     adjustment: z.enum(['IPCA', 'IGP-M', 'INPC', 'Sem reajuste']),
-    costCenter: z
-      .string()
-      .trim()
-      .regex(/^CC-\d{4}$/),
+    costCenter: z.string().trim().min(1).max(20),
     squad: z.string().trim().min(1).max(100),
     manager: z.string().trim().min(2).max(160),
     sla: z.string().trim().max(2000).nullable().default(null),
@@ -43,7 +40,11 @@ export const contractInputSchema = z
     lgpd: z.string().trim().max(5000).nullable().default(null),
   })
   .superRefine((value, context) => {
-    if (parseBrazilianDate(value.end) <= parseBrazilianDate(value.start)) {
+    if (
+      isValidBrazilianDate(value.start) &&
+      isValidBrazilianDate(value.end) &&
+      parseBrazilianDate(value.end) <= parseBrazilianDate(value.start)
+    ) {
       context.addIssue({
         code: 'custom',
         path: ['end'],
@@ -78,6 +79,18 @@ export type ContractInput = z.infer<typeof contractInputSchema>;
 export function parseBrazilianDate(value: string) {
   const [day, month, year] = value.split('/').map(Number);
   return new Date(Date.UTC(year, month - 1, day, 12));
+}
+
+function isValidBrazilianDate(value: string) {
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(value)) return false;
+  const [day, month, year] = value.split('/').map(Number);
+  if (year < 1900 || year > 2100) return false;
+  const date = new Date(Date.UTC(year, month - 1, day, 12));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
 }
 
 export function toIsoDate(value: Date) {
@@ -117,18 +130,5 @@ export function calculateDecisionDeadline(
 
 function isValidCnpj(value: string) {
   const digits = value.replace(/\D/g, '');
-  if (digits.length !== 14 || /^(\d)\1+$/.test(digits)) return false;
-  const calculate = (length: number) => {
-    let factor = length - 7;
-    let total = 0;
-    for (let index = 0; index < length; index += 1) {
-      total += Number(digits[index]) * factor--;
-      if (factor < 2) factor = 9;
-    }
-    const remainder = total % 11;
-    return remainder < 2 ? 0 : 11 - remainder;
-  };
-  return (
-    calculate(12) === Number(digits[12]) && calculate(13) === Number(digits[13])
-  );
+  return digits.length === 14;
 }

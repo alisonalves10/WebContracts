@@ -8,7 +8,9 @@ export type Contract = {
   end: string;
   endDate: string;
   automatic: boolean;
+  renewalPeriodMonths?: number | null;
   notice: number;
+  noticeUnit?: 'calendar_days' | 'business_days' | 'months';
   penalty: boolean;
   penaltyBase: string;
   billing: string;
@@ -20,7 +22,7 @@ export type Contract = {
   sla: string;
   systems: string;
   criticality: 'Alta' | 'Média' | 'Baixa';
-  status: 'Vigente' | 'Em renovação' | 'Encerrado';
+  status: 'Vigente' | 'Em renovação' | 'Encerrado' | 'Cancelado';
   lgpd: string;
 };
 

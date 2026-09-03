@@ -8,7 +8,7 @@ import { contractRoutes } from './routes/contracts';
 const app = Fastify({ logger: true });
 await app.register(cors, {
   origin: ['http://localhost:3000'],
-  methods: ['GET', 'POST', 'PATCH'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH'],
 });
 
 app.get('/api/health', async () => {
@@ -18,7 +18,10 @@ app.get('/api/health', async () => {
 
 await app.register(contractRoutes);
 
+let shuttingDown = false;
 const shutdown = async () => {
+  if (shuttingDown) return;
+  shuttingDown = true;
   await app.close();
   await closeDatabase();
 };

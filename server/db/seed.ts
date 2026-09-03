@@ -1,6 +1,13 @@
 import { contracts as seedContracts } from '../../app/data';
+import { eq } from 'drizzle-orm';
 import { closeDatabase, db } from './index';
-import { contracts, holidays, notificationRules, users } from './schema';
+import {
+  auditLogs,
+  contracts,
+  holidays,
+  notificationRules,
+  users,
+} from './schema';
 import {
   calculateDecisionDeadline,
   parseBrazilianDate,
@@ -11,6 +18,7 @@ const statusMap = {
   Vigente: 'active',
   'Em renovação': 'renewing',
   Encerrado: 'ended',
+  Cancelado: 'cancelled',
 } as const;
 const criticalityMap = { Alta: 'high', Média: 'medium', Baixa: 'low' } as const;
 const billingMap: Record<
@@ -53,6 +61,13 @@ async function seed() {
   await db
     .insert(users)
     .values([
+      {
+        name: 'Alison Martins',
+        email: 'alison@webcontinental.com.br',
+        initials: 'AM',
+        area: 'Controladoria',
+        status: 'active',
+      },
       {
         name: 'Rafael Coutinho',
         email: 'rafael.coutinho@webcontinental.com.br',
@@ -141,6 +156,31 @@ async function seed() {
       })),
     )
     .onConflictDoNothing();
+
+  const [currentUser] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, 'alison@webcontinental.com.br'))
+    .limit(1);
+  const loggedContracts = await db
+    .select({ entityId: auditLogs.entityId })
+    .from(auditLogs)
+    .where(eq(auditLogs.entityType, 'contract'));
+  const loggedIds = new Set(loggedContracts.map((item) => item.entityId));
+  const missingHistory = seedContracts.filter(
+    (contract) => !loggedIds.has(contract.id),
+  );
+  if (missingHistory.length) {
+    await db.insert(auditLogs).values(
+      missingHistory.map((contract) => ({
+        actorId: currentUser?.id,
+        entityType: 'contract',
+        entityId: contract.id,
+        action: 'created',
+        after: contract,
+      })),
+    );
+  }
 
   await db
     .insert(notificationRules)
