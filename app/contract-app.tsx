@@ -217,6 +217,7 @@ function toneForCriticality(value: Contract['criticality']): Tone {
 
 export default function ContractApp() {
   const [view, setView] = useState<View>('dashboard');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [contractItems, setContractItems] = useState<Contract[]>(seedContracts);
   const [selectedId, setSelectedId] = useState(seedContracts[0].id);
   const [detailTab, setDetailTab] = useState<
@@ -339,11 +340,24 @@ export default function ContractApp() {
 
   return (
     <main className="app-shell">
-      <aside className="sidebar">
+      <aside className={`sidebar${sidebarCollapsed ? ' collapsed' : ''}`}>
         <div className="brand">
           <div className="brand-mark">WEBCO</div>
           <div className="brand-subtitle">Gestão de contratos</div>
         </div>
+        <button
+          type="button"
+          className="sidebar-toggle"
+          aria-label={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'}
+          aria-expanded={!sidebarCollapsed}
+          onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+        >
+          {sidebarCollapsed ? (
+            <ChevronRight aria-hidden="true" />
+          ) : (
+            <ChevronLeft aria-hidden="true" />
+          )}
+        </button>
         <nav className="side-nav" aria-label="Navegação principal">
           {navItems.map(([key, label, Icon]) => {
             const count =
@@ -359,6 +373,7 @@ export default function ContractApp() {
                 className={`nav-item${navView === key ? ' active' : ''}`}
                 key={key}
                 type="button"
+                title={sidebarCollapsed ? label : undefined}
                 onClick={() => setView(key)}
               >
                 <Icon aria-hidden="true" />
