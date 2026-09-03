@@ -415,10 +415,16 @@ export const money = (value: number) =>
         currency: 'BRL',
       }).format(value)
     : '—';
-export const daysUntil = (date: string) =>
-  Math.round(
-    (new Date(`${date}T12:00:00`).getTime() - TODAY.getTime()) / 86400000,
+export const daysUntil = (date: string) => {
+  const [year, month, day] = date.split('-').map(Number);
+  const targetDay = Date.UTC(year, month - 1, day);
+  const currentDay = Date.UTC(
+    TODAY.getFullYear(),
+    TODAY.getMonth(),
+    TODAY.getDate(),
   );
+  return Math.round((targetDay - currentDay) / 86400000);
+};
 export const formatDate = (date: Date) => date.toLocaleDateString('pt-BR');
 export const decisionDate = (contract: Contract) =>
   new Date(
