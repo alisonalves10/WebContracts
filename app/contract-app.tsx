@@ -393,7 +393,7 @@ export default function ContractApp() {
               variant="outline"
               size="icon-lg"
               className="solution-button"
-              aria-label="Mudar de solução"
+              aria-label="Aplicativos Webcontinental"
               onClick={() => setSolutionOpen(true)}
             >
               <Grid2X2 />
