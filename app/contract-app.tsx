@@ -2085,11 +2085,10 @@ function NotificationsView({
               <span className="notification-copy">
                 <span>
                   <strong>{item.title}</strong>
-                  <Pill tone={item.tone}>{item.tag}</Pill>
                 </span>
                 <p>{item.text}</p>
                 <code>
-                  {item.when} · {item.channels}
+                  {item.contract} · {item.when}
                 </code>
               </span>
               <i className={read ? 'read' : ''} />
