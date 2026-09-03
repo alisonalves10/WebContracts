@@ -105,7 +105,7 @@ const VERTICAL_OPTIONS = [
 ] as const;
 
 const SECTOR_OPTIONS = [
-  'Atendiamento Especiais',
+  'Atendimento Especiais',
   'Auditoria',
   'Compliance',
   'Comercial Canais 3P',
