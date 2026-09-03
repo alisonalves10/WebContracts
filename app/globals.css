@@ -174,15 +174,15 @@ button {
 }
 .brand-mark {
   color: #0a0a0b;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  line-height: 16px;
+  line-height: 17px;
 }
 .brand-subtitle {
   color: #6d6e70;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
-  line-height: 14px;
+  line-height: 15px;
 }
 .side-nav {
   display: flex;
@@ -1814,20 +1814,6 @@ code,
   display: flex;
   flex-direction: column;
   gap: 20px;
-}
-.info-alert {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
-  border: 1px solid #bbd9e5;
-  border-radius: 8px;
-  background: var(--info-bg);
-  font-size: 13px;
-}
-.info-alert svg {
-  width: 18px;
-  color: var(--info);
 }
 .rules-header,
 .rule-row {

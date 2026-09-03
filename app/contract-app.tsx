@@ -13,7 +13,6 @@ import {
   Eye,
   FileText,
   Gauge,
-  Info,
   LogOut,
   Plus,
   Search,
@@ -2298,13 +2297,6 @@ function RulesView({
 }) {
   return (
     <section className="rules-page">
-      <div className="info-alert">
-        <Info />
-        <span>
-          Todas as notificações são enviadas exclusivamente ao gestor definido
-          no cadastro de cada contrato.
-        </span>
-      </div>
       <div className="card rules-card">
         <div className="rules-header">
           <span>Gatilho</span>
