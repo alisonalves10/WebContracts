@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gestao-contratos-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-gestao_contratos}
+      POSTGRES_USER: ${POSTGRES_USER:-webco}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-webco_local}
+    ports:
+      - '${POSTGRES_PORT:-54329}:5432'
+    volumes:
+      - gestao_contratos_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-webco} -d ${POSTGRES_DB:-gestao_contratos}',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  gestao_contratos_data:
