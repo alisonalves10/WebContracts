@@ -126,9 +126,11 @@ button {
 .sidebar.collapsed .logout-button span {
   display: none;
 }
-.sidebar.collapsed .side-nav,
-.sidebar.collapsed .sidebar-footer {
+.sidebar.collapsed .side-nav {
   padding-inline: 10px;
+}
+.sidebar.collapsed .sidebar-footer {
+  margin-inline: 8px;
 }
 .sidebar.collapsed .nav-item,
 .sidebar.collapsed .user-card {
@@ -234,15 +236,17 @@ button {
 }
 .sidebar-footer {
   position: relative;
-  margin-top: auto;
-  padding: 16px 16px 12px;
+  height: 97px;
+  flex: none;
+  margin: auto 11px 0;
+  padding: 8px 0 0;
 }
 .sidebar-footer::before {
   content: '';
   position: absolute;
   top: 0;
-  right: 8px;
-  left: 8px;
+  right: 0;
+  left: 0;
   height: 1px;
   background: var(--chrome-line);
 }
@@ -838,7 +842,8 @@ button {
     padding: 0;
   }
   .sidebar-footer {
-    padding: 10px;
+    margin-inline: 8px;
+    padding: 8px 0 0;
   }
   .user-card {
     justify-content: center;
