@@ -129,6 +129,10 @@ export const contracts = pgTable(
       onDelete: 'restrict',
     }),
     managerName: varchar('manager_name', { length: 160 }).notNull(),
+    notificationEmails: text('notification_emails')
+      .array()
+      .notNull()
+      .default(sql`ARRAY[]::text[]`),
     sla: text('sla'),
     integratedSystems: text('integrated_systems')
       .array()

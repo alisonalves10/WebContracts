@@ -73,6 +73,7 @@ export function serializeContract(row: ContractRow) {
     costCenter: row.costCenter,
     squad: row.squad,
     manager: row.managerName,
+    notificationEmails: row.notificationEmails,
     sla: row.sla ?? '',
     systems: row.integratedSystems.join(', ') || '—',
     criticality: criticalityToApi[row.criticality],
@@ -283,6 +284,7 @@ async function contractValues(input: ContractInput) {
     costCenter: input.costCenter,
     squad: input.squad,
     managerName: input.manager,
+    notificationEmails: input.notificationEmails,
     sla: input.sla,
     integratedSystems: input.systems,
     lgpdNotes: input.lgpd,
@@ -347,7 +349,8 @@ function contractChanges(
     { key: 'adjustmentIndex', label: 'Índice de reajuste' },
     { key: 'costCenter', label: 'Centro de custo' },
     { key: 'squad', label: 'Setor responsável' },
-    { key: 'managerName', label: 'Gestor interno' },
+    { key: 'managerName', label: 'Nome do responsável' },
+    { key: 'notificationEmails', label: 'E-mails para notificações' },
     { key: 'sla', label: 'SLA' },
     { key: 'integratedSystems', label: 'Sistemas integrados' },
     { key: 'lgpdNotes', label: 'Observações LGPD' },
@@ -377,7 +380,7 @@ function formatHistoryValue(key: keyof ContractRow, value: unknown) {
       style: 'currency',
       currency: 'BRL',
     }).format(Number(value));
-  if (key === 'integratedSystems')
+  if (key === 'integratedSystems' || key === 'notificationEmails')
     return Array.isArray(value) && value.length ? value.join(', ') : 'Nenhum';
   const labels: Record<string, string> = {
     high: 'Alta',

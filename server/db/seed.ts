@@ -161,6 +161,7 @@ async function seed() {
         costCenter: contract.costCenter,
         squad: contract.squad,
         managerName: contract.manager,
+        notificationEmails: ['gestao.contratos@webcontinental.com.br'],
         sla: contract.sla,
         integratedSystems:
           contract.systems === '—'

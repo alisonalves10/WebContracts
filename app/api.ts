@@ -167,6 +167,10 @@ export function contractPayload(
     costCenter: text('costCenter'),
     squad: text('squad'),
     manager: text('manager'),
+    notificationEmails: text('notificationEmails')
+      .split(';')
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean),
     sla: text('sla') || null,
     systems: text('systems')
       .split(',')

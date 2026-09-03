@@ -35,6 +35,7 @@ export const contractInputSchema = z
     costCenter: z.string().trim().min(1).max(20),
     squad: z.string().trim().min(1).max(100),
     manager: z.string().trim().min(2).max(160),
+    notificationEmails: z.array(z.email()).min(1).max(20),
     sla: z.string().trim().max(2000).nullable().default(null),
     systems: z.array(z.string().trim().min(1)).default([]),
     lgpd: z.string().trim().max(5000).nullable().default(null),

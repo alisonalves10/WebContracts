@@ -11,6 +11,7 @@ import {
   Eye,
   FileText,
   Gauge,
+  Grid2X2,
   Info,
   Plus,
   Search,
@@ -85,6 +86,52 @@ const navItems = [
   ['access', 'Acessos', Users],
 ] as const;
 
+const VERTICAL_OPTIONS = [
+  '1P',
+  '3P',
+  '1P e 3P',
+  'Controladoria',
+  'Gallant Câmeras Frias',
+  'Gallant Importação',
+  'Peças',
+  'TI',
+  'WebCo',
+] as const;
+
+const SECTOR_OPTIONS = [
+  'Atendiamento Especiais',
+  'Auditoria',
+  'Compliance',
+  'Comercial Canais 3P',
+  'Comercial Sellers 3P',
+  'Comercial Hub 1P',
+  'Dpto de Vendas',
+  'Compras',
+  'Contabilidade',
+  'Controladoria',
+  'E-commerce Webco',
+  'Contas a Pagar',
+  'Contas a Receber',
+  'Fiscal',
+  'B2B',
+  'Importação',
+  'Gallant Refrigeração',
+  'Jurídico Tributário',
+  'Logística',
+  'Marketing',
+  'Onboarding 3P',
+  'Produto 1P',
+  'Produto 3P',
+  'Qualidade 3P',
+  'Qualidade 1P',
+  'Sac 3P',
+  'Sac 1P',
+  'TI',
+  'Indústria',
+  'Webinstala',
+  'Webresolve',
+] as const;
+
 const ruleSeed = [
   [
     'D-90 / D-60 / D-30 do fim da vigência',
@@ -153,9 +200,9 @@ export default function ContractApp() {
   const [detailTab, setDetailTab] = useState<
     'summary' | 'documents' | 'history'
   >('summary');
-  const [filter, setFilter] = useState('Todos');
   const [search, setSearch] = useState('');
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
+  const [solutionOpen, setSolutionOpen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
   const [readIds, setReadIds] = useState<string[]>([]);
   const [notificationFilter, setNotificationFilter] = useState<
@@ -229,11 +276,6 @@ export default function ContractApp() {
   const refreshHistory = async (id: string) => {
     setHistory(await fetchContractHistory(id));
   };
-  const openNewContract = () => {
-    setAutoRenew(true);
-    setHasPenalty(false);
-    setView('new');
-  };
   const openEditContract = () => {
     setAutoRenew(selected.automatic);
     setHasPenalty(selected.penalty);
@@ -249,15 +291,9 @@ export default function ContractApp() {
           `${contract.name} ${contract.vendor} ${contract.id}`
             .toLocaleLowerCase('pt-BR')
             .includes(query);
-        const days = daysUntil(contract.endDate);
-        const matchesFilter =
-          filter === 'Todos' ||
-          contract.status === filter ||
-          (filter === 'Vence em 90 dias' && days >= 0 && days <= 90) ||
-          (filter === 'Renovação automática' && contract.automatic);
-        return matchesSearch && matchesFilter;
+        return matchesSearch;
       }),
-    [contractItems, filter, search],
+    [contractItems, search],
   );
   const globalSearchResults = useMemo(() => {
     const query = globalSearch.trim().toLocaleLowerCase('pt-BR');
@@ -354,11 +390,13 @@ export default function ContractApp() {
               <span>{unread}</span>
             </Button>
             <Button
-              size="lg"
-              className="primary-action"
-              onClick={openNewContract}
+              variant="outline"
+              size="icon-lg"
+              className="solution-button"
+              aria-label="Mudar de solução"
+              onClick={() => setSolutionOpen(true)}
             >
-              <Plus /> Novo contrato
+              <Grid2X2 />
             </Button>
           </div>
         </header>
@@ -377,11 +415,14 @@ export default function ContractApp() {
             <ContractsView
               contracts={filteredContracts}
               total={contractItems.length}
-              filter={filter}
               search={search}
-              onFilter={setFilter}
               onSearch={setSearch}
               onOpen={openContract}
+              onNew={() => {
+                setAutoRenew(true);
+                setHasPenalty(false);
+                setView('new');
+              }}
             />
           )}
           {view === 'detail' && (
@@ -540,6 +581,7 @@ export default function ContractApp() {
                   return { month: date.getMonth(), year: date.getFullYear() };
                 })
               }
+              onSelectDate={(month, year) => setCalendarCursor({ month, year })}
               onOpen={openContract}
             />
           )}
@@ -582,6 +624,44 @@ export default function ContractApp() {
         }}
         onSelect={selectGlobalSearchResult}
       />
+      <Dialog open={solutionOpen} onOpenChange={setSolutionOpen}>
+        <DialogContent className="solution-dialog" showCloseButton>
+          <DialogHeader>
+            <DialogTitle>Mudar de solução</DialogTitle>
+            <DialogDescription>
+              Escolha uma solução Webcontinental para acessar.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="solution-list">
+            {[
+              ['Gestão de contratos', 'Solução atual'],
+              ['Central financeira', 'Em breve'],
+              ['Marketplace', 'Em breve'],
+              ['Logística', 'Em breve'],
+            ].map(([name, status], index) => (
+              <button
+                type="button"
+                key={name}
+                className={index === 0 ? 'active' : ''}
+                onClick={() => {
+                  setSolutionOpen(false);
+                  if (index > 0)
+                    showToast(
+                      'Solução indisponível',
+                      `${name} estará disponível em breve.`,
+                    );
+                }}
+              >
+                <Grid2X2 />
+                <span>
+                  <strong>{name}</strong>
+                  <small>{status}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
       <DocumentDialog
         open={previewOpen}
         onOpenChange={setPreviewOpen}
@@ -850,39 +930,58 @@ function Dashboard({
 function ContractsView({
   contracts: items,
   total,
-  filter,
   search,
-  onFilter,
   onSearch,
   onOpen,
+  onNew,
 }: {
   contracts: Contract[];
   total: number;
-  filter: string;
   search: string;
-  onFilter: (value: string) => void;
   onSearch: (value: string) => void;
   onOpen: (id: string) => void;
+  onNew: () => void;
 }) {
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
-  const filters = [
-    'Todos',
-    'Vigente',
-    'Em renovação',
-    'Vence em 90 dias',
-    'Renovação automática',
-    'Encerrado',
-    'Cancelado',
-  ];
-  const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  const [expiryFilters, setExpiryFilters] = useState<number[]>([]);
+  const [verticalFilters, setVerticalFilters] = useState<string[]>([]);
+  const [sectorFilters, setSectorFilters] = useState<string[]>([]);
+  const statuses = ['Vigente', 'Em renovação', 'Encerrado', 'Cancelado'];
+  const filteredItems = items.filter((contract) => {
+    const days = daysUntil(contract.endDate);
+    return (
+      (!statusFilters.length || statusFilters.includes(contract.status)) &&
+      (!expiryFilters.length ||
+        expiryFilters.some((limit) => days >= 0 && days <= limit)) &&
+      (!verticalFilters.length ||
+        verticalFilters.includes(contract.destination)) &&
+      (!sectorFilters.length || sectorFilters.includes(contract.squad))
+    );
+  });
+  const pageCount = Math.max(1, Math.ceil(filteredItems.length / pageSize));
   const currentPage = Math.min(page, pageCount);
-  const pageItems = items.slice(
+  const pageItems = filteredItems.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize,
   );
-  const firstResult = items.length ? (currentPage - 1) * pageSize + 1 : 0;
-  const lastResult = Math.min(currentPage * pageSize, items.length);
+  const firstResult = filteredItems.length
+    ? (currentPage - 1) * pageSize + 1
+    : 0;
+  const lastResult = Math.min(currentPage * pageSize, filteredItems.length);
+  const toggleFilter = <T extends string | number>(
+    value: T,
+    values: T[],
+    setValues: React.Dispatch<React.SetStateAction<T[]>>,
+  ) => {
+    setPage(1);
+    setValues((current) =>
+      current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value],
+    );
+  };
 
   return (
     <section className="list-page">
@@ -899,24 +998,48 @@ function ContractsView({
             }}
           />
         </div>
-        <div className="filter-chips">
-          {filters.map((item) => (
-            <button
-              type="button"
-              className={filter === item ? 'active' : ''}
-              key={item}
-              onClick={() => {
-                setPage(1);
-                onFilter(item);
-              }}
-            >
-              {item}
-            </button>
-          ))}
+        <div className="contract-filter-groups">
+          <MultiFilter
+            label="Status"
+            values={statuses}
+            selected={statusFilters}
+            onToggle={(value) =>
+              toggleFilter(value, statusFilters, setStatusFilters)
+            }
+          />
+          <MultiFilter
+            label="Vencimento"
+            values={['30 dias', '60 dias', '90 dias']}
+            selected={expiryFilters.map((value) => `${value} dias`)}
+            onToggle={(value) => {
+              const limit = Number(value.split(' ')[0]);
+              toggleFilter(limit, expiryFilters, setExpiryFilters);
+            }}
+          />
+          <MultiFilter
+            label="Vertical"
+            values={[...VERTICAL_OPTIONS]}
+            selected={verticalFilters}
+            onToggle={(value) =>
+              toggleFilter(value, verticalFilters, setVerticalFilters)
+            }
+          />
+          <MultiFilter
+            label="Setor"
+            values={[...SECTOR_OPTIONS]}
+            selected={sectorFilters}
+            onToggle={(value) =>
+              toggleFilter(value, sectorFilters, setSectorFilters)
+            }
+          />
         </div>
         <span className="result-count">
-          {items.length} de {total} contratos
+          {filteredItems.length} de {total} contratos
         </span>
+        <Button type="button" className="contracts-new-button" onClick={onNew}>
+          <Plus size={16} />
+          Novo contrato
+        </Button>
       </div>
       <div className="table-card">
         <table>
@@ -972,7 +1095,7 @@ function ContractsView({
             ))}
           </tbody>
         </table>
-        {items.length === 0 ? (
+        {filteredItems.length === 0 ? (
           <div className="empty-state">
             <strong>Nenhum contrato encontrado</strong>
             <span>Ajuste os filtros ou cadastre um novo contrato.</span>
@@ -997,7 +1120,7 @@ function ContractsView({
           por página
         </label>
         <span>
-          {firstResult}–{lastResult} de {items.length}
+          {firstResult}–{lastResult} de {filteredItems.length}
         </span>
         <div>
           <Button
@@ -1024,6 +1147,39 @@ function ContractsView({
         </div>
       </div>
     </section>
+  );
+}
+
+function MultiFilter({
+  label,
+  values,
+  selected,
+  onToggle,
+}: {
+  label: string;
+  values: string[];
+  selected: string[];
+  onToggle: (value: string) => void;
+}) {
+  return (
+    <details className="multi-filter">
+      <summary>
+        {label}
+        {selected.length ? <span>{selected.length}</span> : null}
+      </summary>
+      <div>
+        {values.map((value) => (
+          <label key={value}>
+            <input
+              type="checkbox"
+              checked={selected.includes(value)}
+              onChange={() => onToggle(value)}
+            />
+            <span>{value}</span>
+          </label>
+        ))}
+      </div>
+    </details>
   );
 }
 
@@ -1085,7 +1241,11 @@ function DetailView({
         ['Índice de reajuste', contract.adjustment],
         ['Centro de custo', contract.costCenter],
         ['Setor responsável', contract.squad],
-        ['Gestor interno', contract.manager],
+        ['Nome do responsável', contract.manager],
+        [
+          'E-mails para notificações',
+          contract.notificationEmails?.join('; ') || 'Não informado',
+        ],
       ],
     ],
     [
@@ -1341,10 +1501,23 @@ function NewContract({
         const start = typeof startValue === 'string' ? startValue : '';
         const end = typeof endValue === 'string' ? endValue : '';
         const endInput = form.elements.namedItem('end') as HTMLInputElement;
+        const notificationInput = form.elements.namedItem(
+          'notificationEmails',
+        ) as HTMLInputElement;
+        const emails = notificationInput.value
+          .split(';')
+          .map((email) => email.trim())
+          .filter(Boolean);
         endInput.setCustomValidity(
           start && end && end <= start
             ? 'O fim da vigência deve ser posterior ao início.'
             : '',
+        );
+        notificationInput.setCustomValidity(
+          emails.length > 0 &&
+            emails.every((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+            ? ''
+            : 'Informe e-mails válidos separados por ponto e vírgula.',
         );
         if (!form.reportValidity()) return;
         await onSave(formData);
@@ -1398,16 +1571,11 @@ function NewContract({
             <option value="" disabled>
               Selecione
             </option>
-            {[
-              '1P',
-              '3P',
-              '1P e 3P',
-              'TI',
-              'Logística',
-              'Jurídico',
-              'Corporativo',
-              'Controladoria',
-            ].map((item) => (
+            {initial?.destination &&
+            !VERTICAL_OPTIONS.some((item) => item === initial.destination) ? (
+              <option>{initial.destination}</option>
+            ) : null}
+            {VERTICAL_OPTIONS.map((item) => (
               <option key={item}>{item}</option>
             ))}
           </select>
@@ -1550,16 +1718,31 @@ function NewContract({
           />
         </Field>
         <Field label="Setor responsável">
-          <input
-            name="squad"
-            required
-            maxLength={100}
-            defaultValue={initial?.squad}
-            placeholder="Digite o setor responsável"
-          />
+          <select name="squad" required defaultValue={initial?.squad}>
+            {initial?.squad &&
+            !SECTOR_OPTIONS.some((item) => item === initial.squad) ? (
+              <option>{initial.squad}</option>
+            ) : null}
+            {SECTOR_OPTIONS.map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </select>
         </Field>
-        <Field label="Gestor interno">
+        <Field label="Nome do responsável">
           <input name="manager" required defaultValue={initial?.manager} />
+        </Field>
+        <Field
+          label="E-mails para notificações"
+          span
+          hint="Separe múltiplos endereços com ponto e vírgula (;)."
+        >
+          <input
+            name="notificationEmails"
+            required
+            defaultValue={initial?.notificationEmails?.join('; ') ?? ''}
+            placeholder="responsavel@empresa.com.br; gestor@empresa.com.br"
+            onInput={(event) => event.currentTarget.setCustomValidity('')}
+          />
         </Field>
       </FormSection>
       <FormSection title="Operação e conformidade">
@@ -1750,14 +1933,18 @@ function CalendarView({
   month,
   year,
   onNavigate,
+  onSelectDate,
   onOpen,
 }: {
   contracts: Contract[];
   month: number;
   year: number;
   onNavigate: (direction: -1 | 1) => void;
+  onSelectDate: (month: number, year: number) => void;
   onOpen: (id: string) => void;
 }) {
+  const [mode, setMode] = useState<'month' | 'year'>('month');
+  const [period, setPeriod] = useState('all');
   const names = [
     'Janeiro',
     'Fevereiro',
@@ -1777,6 +1964,50 @@ function CalendarView({
   const cells = Array.from({ length: offset + total }, (_, index) =>
     index < offset ? null : index - offset + 1,
   );
+  const firstYear = Math.min(2020, year);
+  const lastYear = Math.max(2040, year);
+  const yearOptions = Array.from(
+    { length: lastYear - firstYear + 1 },
+    (_, index) => firstYear + index,
+  );
+  const periodMonths: Record<string, number[]> = {
+    all: Array.from({ length: 12 }, (_, index) => index),
+    s1: [0, 1, 2, 3, 4, 5],
+    s2: [6, 7, 8, 9, 10, 11],
+    q1: [0, 1, 2],
+    q2: [3, 4, 5],
+    q3: [6, 7, 8],
+    q4: [9, 10, 11],
+  };
+  const eventsForMonth = (targetMonth: number) =>
+    contracts.flatMap((contract) => {
+      const end = new Date(`${contract.endDate}T12:00:00`);
+      const decision = decisionDate(contract);
+      const events: {
+        day: number;
+        label: string;
+        tone: Tone;
+        id: string;
+      }[] = [];
+      if (end.getFullYear() === year && end.getMonth() === targetMonth)
+        events.push({
+          day: end.getDate(),
+          label: `Fim · ${contract.name}`,
+          tone: 'danger',
+          id: contract.id,
+        });
+      if (
+        decision.getFullYear() === year &&
+        decision.getMonth() === targetMonth
+      )
+        events.push({
+          day: decision.getDate(),
+          label: `Aviso · ${contract.vendor}`,
+          tone: 'warning',
+          id: contract.id,
+        });
+      return events;
+    });
   return (
     <section className="calendar-page">
       <div className="calendar-toolbar">
@@ -1784,18 +2015,43 @@ function CalendarView({
           variant="outline"
           size="icon-lg"
           aria-label="Mês anterior"
-          onClick={() => onNavigate(-1)}
+          onClick={() =>
+            mode === 'month' ? onNavigate(-1) : onSelectDate(month, year - 1)
+          }
         >
           <ChevronLeft />
         </Button>
-        <strong>
-          {names[month]} de {year}
-        </strong>
+        <div className="calendar-date-selectors">
+          <select
+            value={month}
+            aria-label="Selecionar mês"
+            onChange={(event) => onSelectDate(Number(event.target.value), year)}
+          >
+            {names.map((name, index) => (
+              <option value={index} key={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={year}
+            aria-label="Selecionar ano"
+            onChange={(event) =>
+              onSelectDate(month, Number(event.target.value))
+            }
+          >
+            {yearOptions.map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </select>
+        </div>
         <Button
           variant="outline"
           size="icon-lg"
           aria-label="Próximo mês"
-          onClick={() => onNavigate(1)}
+          onClick={() =>
+            mode === 'month' ? onNavigate(1) : onSelectDate(month, year + 1)
+          }
         >
           <ChevronRight />
         </Button>
@@ -1813,66 +2069,109 @@ function CalendarView({
             Hoje
           </span>
         </div>
-      </div>
-      <div className="calendar-card card">
-        <div className="weekday-row">
-          {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
-            <span key={day}>{day}</span>
-          ))}
+        <div className="calendar-mode-controls">
+          <button
+            type="button"
+            className={mode === 'month' ? 'active' : ''}
+            onClick={() => setMode('month')}
+          >
+            Mês
+          </button>
+          <button
+            type="button"
+            className={mode === 'year' ? 'active' : ''}
+            onClick={() => setMode('year')}
+          >
+            Ano inteiro
+          </button>
+          {mode === 'year' ? (
+            <select
+              value={period}
+              aria-label="Filtrar período do ano"
+              onChange={(event) => setPeriod(event.target.value)}
+            >
+              <option value="all">Janeiro a dezembro</option>
+              <option value="s1">1º semestre</option>
+              <option value="s2">2º semestre</option>
+              <option value="q1">1º trimestre</option>
+              <option value="q2">2º trimestre</option>
+              <option value="q3">3º trimestre</option>
+              <option value="q4">4º trimestre</option>
+            </select>
+          ) : null}
         </div>
-        <div className="calendar-grid">
-          {cells.map((day, index) => {
-            const date = day ? new Date(year, month, day) : null;
-            const today = date?.toDateString() === TODAY.toDateString();
-            const events = day
-              ? contracts.flatMap((contract) => {
-                  const end = new Date(`${contract.endDate}T12:00:00`);
-                  const decision = decisionDate(contract);
-                  const list: { label: string; tone: Tone; id: string }[] = [];
-                  if (
-                    end.getFullYear() === year &&
-                    end.getMonth() === month &&
-                    end.getDate() === day
-                  )
-                    list.push({
-                      label: `Fim · ${contract.name}`,
-                      tone: 'danger',
-                      id: contract.id,
-                    });
-                  if (
-                    decision.getFullYear() === year &&
-                    decision.getMonth() === month &&
-                    decision.getDate() === day
-                  )
-                    list.push({
-                      label: `Aviso prévio · ${contract.vendor}`,
-                      tone: 'warning',
-                      id: contract.id,
-                    });
-                  return list;
-                })
-              : [];
+      </div>
+      {mode === 'month' ? (
+        <div className="calendar-card card">
+          <div className="weekday-row">
+            {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
+              <span key={day}>{day}</span>
+            ))}
+          </div>
+          <div className="calendar-grid">
+            {cells.map((day, index) => {
+              const date = day ? new Date(year, month, day) : null;
+              const today = date?.toDateString() === TODAY.toDateString();
+              const events = day
+                ? eventsForMonth(month).filter((event) => event.day === day)
+                : [];
+              return (
+                <div
+                  className={`calendar-cell${!day ? ' blank' : ''}${today ? ' today' : ''}`}
+                  key={index}
+                >
+                  <span>{day}</span>
+                  {events.map((event) => (
+                    <button
+                      type="button"
+                      className={event.tone}
+                      key={`${event.id}-${event.tone}-${event.day}`}
+                      onClick={() => onOpen(event.id)}
+                    >
+                      {event.label}
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="year-calendar-grid">
+          {periodMonths[period].map((targetMonth) => {
+            const events = eventsForMonth(targetMonth);
             return (
-              <div
-                className={`calendar-cell${!day ? ' blank' : ''}${today ? ' today' : ''}`}
-                key={index}
-              >
-                <span>{day}</span>
-                {events.map((event) => (
-                  <button
-                    type="button"
-                    className={event.tone}
-                    key={event.label}
-                    onClick={() => onOpen(event.id)}
-                  >
-                    {event.label}
-                  </button>
-                ))}
-              </div>
+              <section className="year-month-card card" key={targetMonth}>
+                <button
+                  type="button"
+                  className="year-month-title"
+                  onClick={() => {
+                    onSelectDate(targetMonth, year);
+                    setMode('month');
+                  }}
+                >
+                  <strong>{names[targetMonth]}</strong>
+                  <span>{events.length} eventos</span>
+                </button>
+                <div>
+                  {events.slice(0, 5).map((event) => (
+                    <button
+                      type="button"
+                      key={`${event.id}-${event.tone}-${event.day}`}
+                      className={event.tone}
+                      onClick={() => onOpen(event.id)}
+                    >
+                      <code>{String(event.day).padStart(2, '0')}</code>
+                      <span>{event.label}</span>
+                    </button>
+                  ))}
+                  {events.length === 0 ? <small>Sem eventos</small> : null}
+                </div>
+              </section>
             );
           })}
         </div>
-      </div>
+      )}
     </section>
   );
 }
@@ -2102,13 +2401,20 @@ function AccessView({
                 <option value="" disabled>
                   Selecione
                 </option>
-                {['1P', '3P', '1P e 3P', 'TI', 'Corporativo'].map((item) => (
+                {VERTICAL_OPTIONS.map((item) => (
                   <option key={item}>{item}</option>
                 ))}
               </select>
             </Field>
             <Field label="Setor">
-              <input name="sector" required placeholder="Ex.: Controladoria" />
+              <select name="sector" required defaultValue="">
+                <option value="" disabled>
+                  Selecione
+                </option>
+                {SECTOR_OPTIONS.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
             </Field>
             {inviteError ? (
               <p className="form-error" role="alert">

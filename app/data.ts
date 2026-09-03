@@ -19,6 +19,7 @@ export type Contract = {
   costCenter: string;
   squad: string;
   manager: string;
+  notificationEmails?: string[];
   sla: string;
   systems: string;
   criticality: 'Alta' | 'Média' | 'Baixa';
