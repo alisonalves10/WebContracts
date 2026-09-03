@@ -212,7 +212,10 @@ button {
   font-weight: 400;
   text-align: left;
 }
-.nav-item:hover,
+.nav-item:hover {
+  background: #f9f4f5;
+  color: #4f5051;
+}
 .nav-item:focus-visible {
   background: #accaff;
   color: var(--primary);
