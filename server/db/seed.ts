@@ -66,6 +66,8 @@ async function seed() {
         email: 'alison@webcontinental.com.br',
         initials: 'AM',
         area: 'Controladoria',
+        vertical: 'Corporativo',
+        sector: 'Controladoria',
         status: 'active',
       },
       {
@@ -73,6 +75,8 @@ async function seed() {
         email: 'rafael.coutinho@webcontinental.com.br',
         initials: 'RC',
         area: 'Produto',
+        vertical: '1P e 3P',
+        sector: 'Produto',
         status: 'active',
       },
       {
@@ -80,6 +84,8 @@ async function seed() {
         email: 'juliana.prado@webcontinental.com.br',
         initials: 'JP',
         area: 'Marketplace',
+        vertical: '3P',
+        sector: 'Marketplace',
         status: 'active',
       },
       {
@@ -87,6 +93,8 @@ async function seed() {
         email: 'patricia.nunes@webcontinental.com.br',
         initials: 'PN',
         area: 'Jurídico',
+        vertical: 'Corporativo',
+        sector: 'Jurídico',
         status: 'active',
       },
       {
@@ -94,6 +102,8 @@ async function seed() {
         email: 'marcos.vieira@webcontinental.com.br',
         initials: 'MV',
         area: 'Plataforma',
+        vertical: 'TI',
+        sector: 'Plataforma',
         status: 'active',
       },
       {
@@ -101,6 +111,8 @@ async function seed() {
         email: 'ana.lima@webcontinental.com.br',
         initials: 'AL',
         area: 'Checkout',
+        vertical: '1P',
+        sector: 'Checkout',
         status: 'active',
       },
       {
@@ -108,6 +120,8 @@ async function seed() {
         email: 'camila.ferraz@webcontinental.com.br',
         initials: 'CF',
         area: 'Atendimento',
+        vertical: '1P e 3P',
+        sector: 'Atendimento',
         status: 'invite_pending',
       },
     ])
@@ -191,7 +205,7 @@ async function seed() {
         description: 'Alerta escalonado conforme a data de término.',
         screenEnabled: true,
         emailEnabled: true,
-        recipients: ['manager', 'legal'],
+        recipients: ['manager'],
         schedule: {
           offsetsInDays: [90, 60, 30],
           highCriticalityExtraOffset: 120,
@@ -212,7 +226,7 @@ async function seed() {
         description: 'Avisa 7 dias antes da renovação tácita.',
         screenEnabled: true,
         emailEnabled: true,
-        recipients: ['manager', 'finance'],
+        recipients: ['manager'],
         schedule: { offsetInDays: 7 },
       },
       {
@@ -221,7 +235,7 @@ async function seed() {
         description: 'Na data de aniversário, com o índice do contrato.',
         screenEnabled: true,
         emailEnabled: false,
-        recipients: ['finance'],
+        recipients: ['manager'],
         schedule: { offsetInDays: 0 },
       },
       {
@@ -235,6 +249,8 @@ async function seed() {
       },
     ])
     .onConflictDoNothing();
+
+  await db.update(notificationRules).set({ recipients: ['manager'] });
 }
 
 void seed()

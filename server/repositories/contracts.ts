@@ -302,7 +302,7 @@ function historyCopy(action: string, before: unknown, after: unknown) {
   if (action === 'updated')
     return {
       action: 'Contrato editado',
-      detail: 'Os dados cadastrais do contrato foram atualizados.',
+      detail: contractChanges(beforeContract, afterContract),
       tone: 'info' as const,
     };
   if (action === 'cancelled')
@@ -322,4 +322,83 @@ function historyCopy(action: string, before: unknown, after: unknown) {
     detail: 'Ação registrada no contrato.',
     tone: 'neutral' as const,
   };
+}
+
+function contractChanges(
+  before: Partial<ContractRow> | null,
+  after: Partial<ContractRow> | null,
+) {
+  const fields: { key: keyof ContractRow; label: string }[] = [
+    { key: 'name', label: 'Nome' },
+    { key: 'vendor', label: 'Fornecedor' },
+    { key: 'cnpj', label: 'CNPJ' },
+    { key: 'destination', label: 'Vertical' },
+    { key: 'criticality', label: 'Criticidade' },
+    { key: 'startDate', label: 'Início da vigência' },
+    { key: 'endDate', label: 'Fim da vigência' },
+    { key: 'automaticRenewal', label: 'Renovação automática' },
+    { key: 'renewalPeriodMonths', label: 'Período de renovação' },
+    { key: 'noticeQuantity', label: 'Período mínimo de aviso' },
+    { key: 'noticeUnit', label: 'Unidade do aviso' },
+    { key: 'cancellationPenalty', label: 'Multa por cancelamento' },
+    { key: 'penaltyBasis', label: 'Base da multa' },
+    { key: 'billingFormat', label: 'Formato de cobrança' },
+    { key: 'value', label: 'Valor' },
+    { key: 'adjustmentIndex', label: 'Índice de reajuste' },
+    { key: 'costCenter', label: 'Centro de custo' },
+    { key: 'squad', label: 'Setor responsável' },
+    { key: 'managerName', label: 'Gestor interno' },
+    { key: 'sla', label: 'SLA' },
+    { key: 'integratedSystems', label: 'Sistemas integrados' },
+    { key: 'lgpdNotes', label: 'Observações LGPD' },
+  ];
+  const changes = fields.flatMap(({ key, label }) => {
+    const previous = before?.[key];
+    const current = after?.[key];
+    if (JSON.stringify(previous) === JSON.stringify(current)) return [];
+    return [
+      `${label}: ${formatHistoryValue(key, previous)} → ${formatHistoryValue(key, current)}`,
+    ];
+  });
+  return changes.length
+    ? changes.join(' • ')
+    : 'Os dados cadastrais do contrato foram atualizados.';
+}
+
+function formatHistoryValue(key: keyof ContractRow, value: unknown) {
+  if (value === null || value === undefined || value === '')
+    return 'Não informado';
+  if (key === 'startDate' || key === 'endDate')
+    return toBrazilianDate(typeof value === 'string' ? value : '');
+  if (key === 'automaticRenewal' || key === 'cancellationPenalty')
+    return value ? 'Sim' : 'Não';
+  if (key === 'value')
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(Number(value));
+  if (key === 'integratedSystems')
+    return Array.isArray(value) && value.length ? value.join(', ') : 'Nenhum';
+  const labels: Record<string, string> = {
+    high: 'Alta',
+    medium: 'Média',
+    low: 'Baixa',
+    monthly: 'Mensal',
+    quarterly: 'Trimestral',
+    semiannual: 'Semestral',
+    annual: 'Anual',
+    usage: 'Por uso / variável',
+    one_time: 'Pagamento único',
+    calendar_days: 'dias corridos',
+    business_days: 'dias úteis',
+    months: 'meses',
+    none: 'Sem reajuste',
+  };
+  const serialized =
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+      ? `${value}`
+      : JSON.stringify(value);
+  return labels[serialized] ?? serialized;
 }

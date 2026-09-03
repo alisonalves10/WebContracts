@@ -85,6 +85,43 @@ export async function fetchContractHistory(id: string) {
   return body.data;
 }
 
+export type UserRecord = {
+  id: string;
+  name: string;
+  email: string;
+  initials: string;
+  vertical: string;
+  sector: string;
+  managedContracts: number;
+  lastAccessAt: string | null;
+  status: 'Ativo' | 'Convite pendente' | 'Desativado';
+};
+
+export async function fetchUsers(signal?: AbortSignal) {
+  const response = await fetch(`${API_URL}/api/users`, { signal });
+  const body = (await response.json()) as ApiResponse<UserRecord[]>;
+  if (!response.ok || !body.data)
+    throw new Error(body.error ?? 'Não foi possível carregar os usuários');
+  return body.data;
+}
+
+export async function inviteUser(input: {
+  name: string;
+  email: string;
+  vertical: string;
+  sector: string;
+}) {
+  const response = await fetch(`${API_URL}/api/users`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  const body = (await response.json()) as ApiResponse<UserRecord>;
+  if (!response.ok || !body.data)
+    throw new Error(body.error ?? 'Não foi possível convidar o usuário');
+  return body.data;
+}
+
 export function contractPayload(
   formData: FormData,
   automatic: boolean,

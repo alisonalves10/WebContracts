@@ -69,6 +69,12 @@ export const users = pgTable(
     email: varchar('email', { length: 255 }).notNull(),
     initials: varchar('initials', { length: 4 }).notNull(),
     area: varchar('area', { length: 100 }).notNull(),
+    vertical: varchar('vertical', { length: 100 })
+      .notNull()
+      .default('Corporativo'),
+    sector: varchar('sector', { length: 100 })
+      .notNull()
+      .default('Não informado'),
     status: userStatus('status').notNull().default('invite_pending'),
     lastAccessAt: timestamp('last_access_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })

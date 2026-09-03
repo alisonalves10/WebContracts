@@ -828,6 +828,35 @@ code,
   color: var(--muted-foreground);
   font-size: 13px;
 }
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 22px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.pagination-bar label,
+.pagination-bar > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pagination-bar select {
+  height: 30px;
+  padding: 0 28px 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: white;
+  color: var(--foreground);
+  font: inherit;
+}
+.pagination-bar strong {
+  min-width: 54px;
+  color: var(--foreground);
+  font-weight: 600;
+  text-align: center;
+}
 
 .detail-page {
   max-width: 1240px;
@@ -1421,7 +1450,7 @@ code,
 .rules-header,
 .rule-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 96px 96px 150px;
+  grid-template-columns: minmax(0, 1fr) 96px 96px;
   align-items: center;
   gap: 8px;
   padding-inline: 20px;
@@ -1515,7 +1544,7 @@ code,
   overflow-x: auto;
 }
 .users-card table {
-  min-width: 900px;
+  min-width: 1020px;
 }
 .person {
   display: flex;
@@ -1540,6 +1569,25 @@ code,
 }
 .person small {
   color: var(--muted-foreground);
+  font-size: 12px;
+}
+.invite-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-width: 560px;
+}
+.invite-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 17px 20px;
+  padding-top: 6px;
+}
+.invite-form .form-actions,
+.invite-form .form-error {
+  grid-column: 1 / -1;
+}
+.form-error {
+  margin: 0;
+  color: var(--danger);
   font-size: 12px;
 }
 .access-note {
@@ -1683,10 +1731,6 @@ code,
   .rule-row {
     grid-template-columns: minmax(0, 1fr) 62px 62px;
   }
-  .rules-header span:last-child,
-  .rule-row > span:last-child {
-    display: none;
-  }
   .calendar-legend {
     width: 100%;
     margin-left: 0;
@@ -1696,6 +1740,11 @@ code,
   }
 }
 @media (max-width: 720px) {
+  .pagination-bar {
+    align-items: flex-end;
+    flex-direction: column;
+    gap: 10px;
+  }
   .filter-bar {
     align-items: stretch;
   }
@@ -1707,7 +1756,8 @@ code,
     margin-left: 0;
   }
   .form-grid,
-  .form-grid.three {
+  .form-grid.three,
+  .invite-form {
     grid-template-columns: 1fr;
   }
   .form-field.span,

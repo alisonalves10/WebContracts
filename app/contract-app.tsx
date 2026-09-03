@@ -37,7 +37,6 @@ import {
   money,
   notifications,
   TODAY,
-  users,
 } from './data';
 import {
   cancelContract,
@@ -46,8 +45,11 @@ import {
   createContract,
   fetchContractHistory,
   fetchContracts,
+  fetchUsers,
+  inviteUser,
   renewContract,
   updateContract,
+  UserRecord,
 } from './api';
 
 type View =
@@ -87,35 +89,30 @@ const ruleSeed = [
   [
     'D-90 / D-60 / D-30 do fim da vigência',
     'Alerta escalonado conforme a data de término.',
-    'Gestor + Jurídico',
     true,
     true,
   ],
   [
     'Prazo de aviso prévio se aproximando',
     'Dispara 15 dias antes da data-limite de decisão.',
-    'Gestor do contrato',
     true,
     true,
   ],
   [
     'Renovação automática prestes a ocorrer',
     'Avisa 7 dias antes da renovação tácita.',
-    'Gestor + Financeiro',
     true,
     true,
   ],
   [
     'Reajuste anual aplicado',
     'Na data de aniversário, com o índice do contrato.',
-    'Financeiro',
     true,
     false,
   ],
   [
     'Documento obrigatório ausente',
     'Contrato sem PDF assinado após 5 dias do cadastro.',
-    'Gestor do contrato',
     true,
     false,
   ],
@@ -164,7 +161,10 @@ export default function ContractApp() {
   const [notificationFilter, setNotificationFilter] = useState<
     'Não lidas' | 'Todas'
   >('Não lidas');
-  const [month, setMonth] = useState(8);
+  const [calendarCursor, setCalendarCursor] = useState({
+    month: 8,
+    year: 2026,
+  });
   const [previewOpen, setPreviewOpen] = useState(false);
   const [toast, setToast] = useState<{ title: string; text: string } | null>(
     null,
@@ -172,11 +172,11 @@ export default function ContractApp() {
   const [autoRenew, setAutoRenew] = useState(true);
   const [hasPenalty, setHasPenalty] = useState(false);
   const [history, setHistory] = useState<ContractHistoryEntry[]>([]);
+  const [userItems, setUserItems] = useState<UserRecord[]>([]);
   const [rules, setRules] = useState(
-    ruleSeed.map(([title, description, recipients, screen, email]) => ({
+    ruleSeed.map(([title, description, screen, email]) => ({
       title,
       description,
-      recipients,
       screen,
       email,
     })),
@@ -186,6 +186,14 @@ export default function ContractApp() {
     const controller = new AbortController();
     fetchContracts(controller.signal)
       .then((items) => setContractItems(items))
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchUsers(controller.signal)
+      .then(setUserItems)
       .catch(() => undefined);
     return () => controller.abort();
   }, []);
@@ -520,8 +528,18 @@ export default function ContractApp() {
           {view === 'calendar' && (
             <CalendarView
               contracts={contractItems}
-              month={month}
-              onMonth={setMonth}
+              month={calendarCursor.month}
+              year={calendarCursor.year}
+              onNavigate={(direction) =>
+                setCalendarCursor((current) => {
+                  const date = new Date(
+                    current.year,
+                    current.month + direction,
+                    1,
+                  );
+                  return { month: date.getMonth(), year: date.getFullYear() };
+                })
+              }
               onOpen={openContract}
             />
           )}
@@ -537,7 +555,19 @@ export default function ContractApp() {
               }
             />
           )}
-          {view === 'access' && <AccessView />}
+          {view === 'access' && (
+            <AccessView
+              users={userItems}
+              onInvite={async (input) => {
+                const invited = await inviteUser(input);
+                setUserItems((items) => [...items, invited]);
+                showToast(
+                  'Convite enviado',
+                  `${invited.name} foi adicionado com acesso pendente.`,
+                );
+              }}
+            />
+          )}
         </div>
       </section>
 
@@ -754,7 +784,7 @@ function Dashboard({
         <div className="side-cards">
           <section className="card compact-card">
             <div className="card-heading simple">
-              <h2>Contratos por destinação</h2>
+              <h2>Contratos por vertical</h2>
             </div>
             <div className="bar-list">
               {destinationCounts.map(([label, count], i) => (
@@ -834,6 +864,8 @@ function ContractsView({
   onSearch: (value: string) => void;
   onOpen: (id: string) => void;
 }) {
+  const [pageSize, setPageSize] = useState(10);
+  const [page, setPage] = useState(1);
   const filters = [
     'Todos',
     'Vigente',
@@ -843,6 +875,15 @@ function ContractsView({
     'Encerrado',
     'Cancelado',
   ];
+  const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const pageItems = items.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
+  const firstResult = items.length ? (currentPage - 1) * pageSize + 1 : 0;
+  const lastResult = Math.min(currentPage * pageSize, items.length);
+
   return (
     <section className="list-page">
       <div className="filter-bar">
@@ -852,7 +893,10 @@ function ContractsView({
             aria-label="Buscar contratos"
             placeholder="Buscar por contrato, fornecedor ou nº"
             value={search}
-            onChange={(event) => onSearch(event.target.value)}
+            onChange={(event) => {
+              setPage(1);
+              onSearch(event.target.value);
+            }}
           />
         </div>
         <div className="filter-chips">
@@ -861,7 +905,10 @@ function ContractsView({
               type="button"
               className={filter === item ? 'active' : ''}
               key={item}
-              onClick={() => onFilter(item)}
+              onClick={() => {
+                setPage(1);
+                onFilter(item);
+              }}
             >
               {item}
             </button>
@@ -877,7 +924,8 @@ function ContractsView({
             <tr>
               {[
                 'Contrato',
-                'Destinado a',
+                'Vertical',
+                'Setor',
                 'Vigência',
                 'Renovação',
                 'Aviso prévio',
@@ -891,7 +939,7 @@ function ContractsView({
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {pageItems.map((item) => (
               <tr key={item.id} onClick={() => onOpen(item.id)}>
                 <td>
                   <strong>{item.name}</strong>
@@ -902,6 +950,7 @@ function ContractsView({
                 <td>
                   <Pill>{item.destination}</Pill>
                 </td>
+                <td>{item.squad}</td>
                 <td>
                   <code>
                     {item.start.slice(3)} → {item.end}
@@ -929,6 +978,50 @@ function ContractsView({
             <span>Ajuste os filtros ou cadastre um novo contrato.</span>
           </div>
         ) : null}
+      </div>
+      <div className="pagination-bar">
+        <label>
+          Exibir
+          <select
+            value={pageSize}
+            onChange={(event) => {
+              setPage(1);
+              setPageSize(Number(event.target.value));
+            }}
+            aria-label="Contratos por página"
+          >
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+          por página
+        </label>
+        <span>
+          {firstResult}–{lastResult} de {items.length}
+        </span>
+        <div>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label="Página anterior"
+            disabled={currentPage === 1}
+            onClick={() => setPage((value) => Math.max(1, value - 1))}
+          >
+            <ChevronLeft />
+          </Button>
+          <strong>
+            {currentPage} de {pageCount}
+          </strong>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label="Próxima página"
+            disabled={currentPage === pageCount}
+            onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
+          >
+            <ChevronRight />
+          </Button>
+        </div>
       </div>
     </section>
   );
@@ -998,7 +1091,7 @@ function DetailView({
     [
       'Escopo e operação',
       [
-        ['Destinado a', contract.destination],
+        ['Vertical', contract.destination],
         ['Sistemas integrados', contract.systems],
         ['Criticidade', contract.criticality],
         ['SLA contratado', contract.sla],
@@ -1296,7 +1389,7 @@ function NewContract({
             }}
           />
         </Field>
-        <Field label="Destinado a">
+        <Field label="Vertical">
           <select
             name="destination"
             required
@@ -1655,12 +1748,14 @@ function NotificationsView({
 function CalendarView({
   contracts,
   month,
-  onMonth,
+  year,
+  onNavigate,
   onOpen,
 }: {
   contracts: Contract[];
   month: number;
-  onMonth: (value: number) => void;
+  year: number;
+  onNavigate: (direction: -1 | 1) => void;
   onOpen: (id: string) => void;
 }) {
   const names = [
@@ -1677,8 +1772,8 @@ function CalendarView({
     'Novembro',
     'Dezembro',
   ];
-  const offset = new Date(2026, month, 1).getDay();
-  const total = new Date(2026, month + 1, 0).getDate();
+  const offset = new Date(year, month, 1).getDay();
+  const total = new Date(year, month + 1, 0).getDate();
   const cells = Array.from({ length: offset + total }, (_, index) =>
     index < offset ? null : index - offset + 1,
   );
@@ -1689,16 +1784,18 @@ function CalendarView({
           variant="outline"
           size="icon-lg"
           aria-label="Mês anterior"
-          onClick={() => onMonth(Math.max(0, month - 1))}
+          onClick={() => onNavigate(-1)}
         >
           <ChevronLeft />
         </Button>
-        <strong>{names[month]} de 2026</strong>
+        <strong>
+          {names[month]} de {year}
+        </strong>
         <Button
           variant="outline"
           size="icon-lg"
           aria-label="Próximo mês"
-          onClick={() => onMonth(Math.min(11, month + 1))}
+          onClick={() => onNavigate(1)}
         >
           <ChevronRight />
         </Button>
@@ -1725,7 +1822,7 @@ function CalendarView({
         </div>
         <div className="calendar-grid">
           {cells.map((day, index) => {
-            const date = day ? new Date(2026, month, day) : null;
+            const date = day ? new Date(year, month, day) : null;
             const today = date?.toDateString() === TODAY.toDateString();
             const events = day
               ? contracts.flatMap((contract) => {
@@ -1733,7 +1830,7 @@ function CalendarView({
                   const decision = decisionDate(contract);
                   const list: { label: string; tone: Tone; id: string }[] = [];
                   if (
-                    end.getFullYear() === 2026 &&
+                    end.getFullYear() === year &&
                     end.getMonth() === month &&
                     end.getDate() === day
                   )
@@ -1743,7 +1840,7 @@ function CalendarView({
                       id: contract.id,
                     });
                   if (
-                    decision.getFullYear() === 2026 &&
+                    decision.getFullYear() === year &&
                     decision.getMonth() === month &&
                     decision.getDate() === day
                   )
@@ -1787,7 +1884,6 @@ function RulesView({
   rules: {
     title: string;
     description: string;
-    recipients: string;
     screen: boolean;
     email: boolean;
   }[];
@@ -1798,8 +1894,8 @@ function RulesView({
       <div className="info-alert">
         <Info />
         <span>
-          As regras valem para todos os contratos. Cada contrato pode
-          sobrescrever prazos no próprio cadastro.
+          Todas as notificações são enviadas exclusivamente ao gestor definido
+          no cadastro de cada contrato.
         </span>
       </div>
       <div className="card rules-card">
@@ -1807,7 +1903,6 @@ function RulesView({
           <span>Gatilho</span>
           <span>Em tela</span>
           <span>E-mail</span>
-          <span>Destinatários</span>
         </div>
         {rules.map((rule, index) => (
           <div className="rule-row" key={rule.title}>
@@ -1825,25 +1920,24 @@ function RulesView({
               onCheckedChange={() => onToggle(index, 'email')}
               aria-label={`E-mail: ${rule.title}`}
             />
-            <span>{rule.recipients}</span>
           </div>
         ))}
       </div>
       <section className="card email-preview">
         <h2>Pré-visualização do e-mail</h2>
-        <p>Modelo enviado no gatilho D-60</p>
+        <p>Modelo único usado nos gatilhos D-90, D-60 e D-30</p>
         <div>
           <header>
-            <b>Assunto:</b> [Contratos] Faltam 60 dias para o fim da vigência —
-            Plataforma de frete inteligente
+            <b>Assunto:</b> [Contratos] Faltam {'{{dias}}'} dias para o fim da
+            vigência — Plataforma de frete inteligente
             <br />
-            <b>Para:</b> gestor.contrato@webcontinental.com.br ·
-            juridico@webcontinental.com.br
+            <b>Para:</b> gestor.contrato@webcontinental.com.br
           </header>
           <article>
             <h3>Decisão de renovação necessária</h3>
             <p>
-              O contrato <code>CTR-2026-0142</code> chega ao fim em{' '}
+              Faltam <strong>{'{{dias}}'} dias</strong> para o contrato{' '}
+              <code>CTR-2026-0142</code> chegar ao fim em{' '}
               <strong>31/10/2026</strong>. Revise as condições e registre a
               decisão dentro do prazo.
             </p>
@@ -1856,7 +1950,21 @@ function RulesView({
   );
 }
 
-function AccessView() {
+function AccessView({
+  users,
+  onInvite,
+}: {
+  users: UserRecord[];
+  onInvite: (input: {
+    name: string;
+    email: string;
+    vertical: string;
+    sector: string;
+  }) => Promise<void>;
+}) {
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteError, setInviteError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const colors = [
     '#0b286e',
     '#1753cc',
@@ -1870,7 +1978,10 @@ function AccessView() {
       <section className="card users-card">
         <div className="card-heading">
           <h2>Usuários</h2>
-          <Button aria-label="Convidar novo usuário">
+          <Button
+            aria-label="Convidar novo usuário"
+            onClick={() => setInviteOpen(true)}
+          >
             <Plus /> Convidar usuário
           </Button>
         </div>
@@ -1880,7 +1991,8 @@ function AccessView() {
               <tr>
                 {[
                   'Usuário',
-                  'Área',
+                  'Vertical',
+                  'Setor',
                   'Contratos sob gestão',
                   'Último acesso',
                   'Situação',
@@ -1890,48 +2002,134 @@ function AccessView() {
               </tr>
             </thead>
             <tbody>
-              {users.map(
-                ([name, email, initials, area, count, last, status], index) => (
-                  <tr key={email}>
-                    <td aria-label={`Usuário: ${name}`}>
-                      <div className="person">
-                        <span style={{ background: colors[index] }}>
-                          {initials}
-                        </span>
-                        <div>
-                          <strong>{name}</strong>
-                          <small>{email}</small>
-                        </div>
+              {users.map((user, index) => (
+                <tr key={user.email}>
+                  <td aria-label={`Usuário: ${user.name}`}>
+                    <div className="person">
+                      <span
+                        style={{ background: colors[index % colors.length] }}
+                      >
+                        {user.initials}
+                      </span>
+                      <div>
+                        <strong>{user.name}</strong>
+                        <small>{user.email}</small>
                       </div>
-                    </td>
-                    <td>{area}</td>
-                    <td>{count}</td>
-                    <td>
-                      <code>{last}</code>
-                    </td>
-                    <td>
-                      <Pill tone={status === 'Ativo' ? 'success' : 'warning'}>
-                        {status}
-                      </Pill>
-                    </td>
-                  </tr>
-                ),
-              )}
+                    </div>
+                  </td>
+                  <td>{user.vertical}</td>
+                  <td>{user.sector}</td>
+                  <td>{user.managedContracts}</td>
+                  <td>
+                    <code>
+                      {user.lastAccessAt
+                        ? new Date(user.lastAccessAt).toLocaleString('pt-BR')
+                        : '—'}
+                    </code>
+                  </td>
+                  <td>
+                    <Pill
+                      tone={user.status === 'Ativo' ? 'success' : 'warning'}
+                    >
+                      {user.status}
+                    </Pill>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       </section>
-      <section className="card access-note">
-        <Info aria-hidden="true" />
-        <div>
-          <h2>Acesso único para todos os usuários</h2>
-          <p>
-            Todo usuário convidado pode consultar, cadastrar, editar, anexar
-            documentos e registrar decisões. O controle é feito por convite e
-            desativação, mantendo o rastro de cada ação no histórico.
-          </p>
-        </div>
-      </section>
+      <Dialog
+        open={inviteOpen}
+        onOpenChange={(open) => {
+          setInviteOpen(open);
+          if (!open) setInviteError('');
+        }}
+      >
+        <DialogContent className="invite-dialog" showCloseButton>
+          <DialogHeader>
+            <DialogTitle>Convidar usuário</DialogTitle>
+            <DialogDescription>
+              Cadastre os dados de acesso e organização do novo usuário.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="invite-form"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              const form = event.currentTarget;
+              const data = new FormData(form);
+              const value = (field: string) => {
+                const entry = data.get(field);
+                return typeof entry === 'string' ? entry.trim() : '';
+              };
+              setInviteError('');
+              setSubmitting(true);
+              try {
+                await onInvite({
+                  name: value('name'),
+                  email: value('email'),
+                  vertical: value('vertical'),
+                  sector: value('sector'),
+                });
+                form.reset();
+                setInviteOpen(false);
+              } catch (error) {
+                setInviteError(
+                  error instanceof Error
+                    ? error.message
+                    : 'Não foi possível enviar o convite.',
+                );
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+          >
+            <Field label="Nome completo" span>
+              <input name="name" required placeholder="Nome do usuário" />
+            </Field>
+            <Field label="E-mail" span>
+              <input
+                name="email"
+                required
+                type="email"
+                placeholder="nome@empresa.com.br"
+              />
+            </Field>
+            <Field label="Vertical">
+              <select name="vertical" required defaultValue="">
+                <option value="" disabled>
+                  Selecione
+                </option>
+                {['1P', '3P', '1P e 3P', 'TI', 'Corporativo'].map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Setor">
+              <input name="sector" required placeholder="Ex.: Controladoria" />
+            </Field>
+            {inviteError ? (
+              <p className="form-error" role="alert">
+                {inviteError}
+              </p>
+            ) : null}
+            <div className="form-actions">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setInviteOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? 'Enviando...' : 'Enviar convite'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
@@ -1951,7 +2149,7 @@ function DocumentDialog({
   const clauses = [
     [
       'Cláusula 1ª — Objeto',
-      `Prestação de serviços de ${contract.name.toLowerCase()} pela CONTRATADA ${contract.vendor}, inscrita no CNPJ sob o nº ${contract.cnpj}, destinada à operação ${contract.destination} da CONTRATANTE.`,
+      `Prestação de serviços de ${contract.name.toLowerCase()} pela CONTRATADA ${contract.vendor}, inscrita no CNPJ sob o nº ${contract.cnpj}, para a vertical ${contract.destination} da CONTRATANTE.`,
     ],
     [
       'Cláusula 2ª — Vigência',
