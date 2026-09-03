@@ -496,16 +496,17 @@ export default function ContractApp() {
                     );
                   })}
                 </div>
-                <button
-                  type="button"
+                <a
+                  href="#notificacoes"
                   className="all-notifications-link"
-                  onClick={() => {
+                  onClick={(event) => {
+                    event.preventDefault();
                     setNotificationOpen(false);
                     setView('notifications');
                   }}
                 >
                   Ver todas as notificações
-                </button>
+                </a>
               </PopoverContent>
             </Popover>
             <Popover open={solutionOpen} onOpenChange={setSolutionOpen}>
