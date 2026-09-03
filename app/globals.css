@@ -221,6 +221,7 @@ button {
 .nav-item.active {
   background: #accaff;
   color: #0d3080;
+  box-shadow: 0 2px 6px #d9e509;
 }
 .nav-item svg {
   width: 17px;
