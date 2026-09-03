@@ -216,6 +216,10 @@ button {
   background: #f9f4f5;
   color: #4f5051;
 }
+.nav-item:hover > span {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 .nav-item:focus-visible {
   background: #accaff;
   color: var(--primary);
