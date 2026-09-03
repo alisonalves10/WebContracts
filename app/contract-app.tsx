@@ -430,11 +430,15 @@ export default function ContractApp() {
               variant="outline"
               size="icon-lg"
               className="notification-button"
-              aria-label="Abrir notificações"
+              aria-label={
+                unread > 0
+                  ? `Abrir notificações: ${unread} não lida${unread === 1 ? '' : 's'}`
+                  : 'Abrir notificações'
+              }
               onClick={() => setView('notifications')}
             >
               <Bell />
-              <span>{unread}</span>
+              {unread > 0 ? <span aria-hidden="true" /> : null}
             </Button>
             <Popover open={solutionOpen} onOpenChange={setSolutionOpen}>
               <PopoverTrigger

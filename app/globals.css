@@ -365,19 +365,13 @@ button {
 }
 .notification-button > span {
   position: absolute;
-  top: -7px;
-  right: -7px;
-  min-width: 18px;
-  height: 18px;
-  display: grid;
-  place-items: center;
-  padding: 0 4px;
-  border: 2px solid white;
+  top: 6px;
+  right: 7px;
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid white;
   border-radius: 999px;
   background: var(--danger);
-  color: white;
-  font-size: 9px;
-  font-weight: 700;
 }
 .solution-button svg {
   width: 16px;
