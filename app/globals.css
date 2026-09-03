@@ -122,7 +122,8 @@ button {
 }
 .sidebar.collapsed .brand-copy,
 .sidebar.collapsed .nav-item > span,
-.sidebar.collapsed .user-copy {
+.sidebar.collapsed .user-copy,
+.sidebar.collapsed .logout-button span {
   display: none;
 }
 .sidebar.collapsed .side-nav,
@@ -138,6 +139,9 @@ button {
 }
 .sidebar.collapsed .user-card {
   padding: 8px 0;
+}
+.sidebar.collapsed .logout-button {
+  justify-content: center;
 }
 .brand {
   height: 64px;
@@ -229,22 +233,28 @@ button {
   color: var(--danger);
 }
 .sidebar-footer {
+  position: relative;
   margin-top: auto;
-  padding: 12px;
-  border-top: 1px solid var(--line);
+  padding: 16px 16px 12px;
+}
+.sidebar-footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 8px;
+  left: 8px;
+  height: 1px;
+  background: var(--chrome-line);
 }
 .user-card {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px;
-  border-radius: 6px;
-  background: var(--surface);
+  gap: 8px;
 }
 .avatar {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   flex: none;
   display: grid;
   place-items: center;
@@ -272,6 +282,27 @@ button {
 .user-copy span {
   color: var(--muted-foreground);
   font-size: 10px;
+}
+.logout-button {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+}
+.logout-button:hover {
+  color: #bd1938;
+}
+.logout-button svg {
+  width: 15px;
+  height: 15px;
 }
 .workspace {
   min-width: 0;
@@ -753,7 +784,8 @@ button {
   .brand-copy,
   .nav-item > span:not(.nav-count),
   .nav-count,
-  .user-copy {
+  .user-copy,
+  .logout-button span {
     display: none;
   }
   .side-nav {
@@ -769,6 +801,9 @@ button {
   .user-card {
     justify-content: center;
     padding: 8px 0;
+  }
+  .logout-button {
+    justify-content: center;
   }
   .topbar {
     padding-inline: 18px;

@@ -13,6 +13,7 @@ import {
   FileText,
   Gauge,
   Info,
+  LogOut,
   Plus,
   Search,
   Settings2,
@@ -401,12 +402,26 @@ export default function ContractApp() {
         </nav>
         <div className="sidebar-footer">
           <div className="user-card">
-            <div className="avatar">AM</div>
+            <div className="avatar">AO</div>
             <div className="user-copy">
-              <strong>Alison Martins</strong>
-              <span>alison@webcontinental.com.br</span>
+              <strong>Alison Oliveira</strong>
+              <span>alison.oliveira@webcontinental.com.br</span>
             </div>
           </div>
+          <button
+            type="button"
+            className="logout-button"
+            title="Sair"
+            onClick={() =>
+              showToast(
+                'Sair da conta',
+                'A autenticação será encerrada quando o acesso corporativo estiver conectado.',
+              )
+            }
+          >
+            <LogOut aria-hidden="true" />
+            <span>Sair</span>
+          </button>
         </div>
       </aside>
 
