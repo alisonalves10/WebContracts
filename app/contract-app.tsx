@@ -1,11 +1,12 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Bell,
   CalendarDays,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -1015,6 +1016,7 @@ function ContractsView({
   const [expiryFilters, setExpiryFilters] = useState<number[]>([]);
   const [verticalFilters, setVerticalFilters] = useState<string[]>([]);
   const [sectorFilters, setSectorFilters] = useState<string[]>([]);
+  const [openFilter, setOpenFilter] = useState<string | null>(null);
   const statuses = ['Vigente', 'Em renovação', 'Encerrado', 'Cancelado'];
   const filteredItems = items.filter((contract) => {
     const days = daysUntil(contract.endDate);
@@ -1068,6 +1070,8 @@ function ContractsView({
         <div className="contract-filter-groups">
           <MultiFilter
             label="Status"
+            open={openFilter === 'status'}
+            onOpenChange={(open) => setOpenFilter(open ? 'status' : null)}
             values={statuses}
             selected={statusFilters}
             onToggle={(value) =>
@@ -1076,6 +1080,8 @@ function ContractsView({
           />
           <MultiFilter
             label="Vencimento"
+            open={openFilter === 'expiry'}
+            onOpenChange={(open) => setOpenFilter(open ? 'expiry' : null)}
             values={['30 dias', '60 dias', '90 dias']}
             selected={expiryFilters.map((value) => `${value} dias`)}
             onToggle={(value) => {
@@ -1085,6 +1091,8 @@ function ContractsView({
           />
           <MultiFilter
             label="Vertical"
+            open={openFilter === 'vertical'}
+            onOpenChange={(open) => setOpenFilter(open ? 'vertical' : null)}
             values={[...VERTICAL_OPTIONS]}
             selected={verticalFilters}
             onToggle={(value) =>
@@ -1093,6 +1101,8 @@ function ContractsView({
           />
           <MultiFilter
             label="Setor"
+            open={openFilter === 'sector'}
+            onOpenChange={(open) => setOpenFilter(open ? 'sector' : null)}
             values={[...SECTOR_OPTIONS]}
             selected={sectorFilters}
             onToggle={(value) =>
@@ -1219,34 +1229,65 @@ function ContractsView({
 
 function MultiFilter({
   label,
+  open,
+  onOpenChange,
   values,
   selected,
   onToggle,
 }: {
   label: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   values: string[];
   selected: string[];
   onToggle: (value: string) => void;
 }) {
+  const filterRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!filterRef.current?.contains(event.target as Node))
+        onOpenChange(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onOpenChange(false);
+    };
+    document.addEventListener('pointerdown', closeOnOutsideClick);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsideClick);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [onOpenChange, open]);
+
   return (
-    <details className="multi-filter">
-      <summary>
-        {label}
+    <div className="multi-filter" ref={filterRef}>
+      <button
+        type="button"
+        className="multi-filter-trigger"
+        aria-expanded={open}
+        onClick={() => onOpenChange(!open)}
+      >
+        <span className="multi-filter-label">{label}</span>
         {selected.length ? <span>{selected.length}</span> : null}
-      </summary>
-      <div>
-        {values.map((value) => (
-          <label key={value}>
-            <input
-              type="checkbox"
-              checked={selected.includes(value)}
-              onChange={() => onToggle(value)}
-            />
-            <span>{value}</span>
-          </label>
-        ))}
-      </div>
-    </details>
+        <ChevronDown aria-hidden="true" />
+      </button>
+      {open ? (
+        <div className="multi-filter-menu">
+          {values.map((value) => (
+            <label key={value}>
+              <input
+                type="checkbox"
+                checked={selected.includes(value)}
+                onChange={() => onToggle(value)}
+              />
+              <span>{value}</span>
+            </label>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 

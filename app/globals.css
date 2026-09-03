@@ -908,6 +908,7 @@ button {
   padding: 0;
   border: 0;
   border-radius: 0;
+  background: #ffffff;
   box-shadow: none !important;
 }
 .filter-chips {
@@ -939,12 +940,13 @@ button {
 .multi-filter {
   position: relative;
 }
-.multi-filter summary {
+.multi-filter-trigger {
+  min-width: 112px;
   height: 34px;
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 0 11px;
+  padding: 0 8px 0 11px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: white;
@@ -952,16 +954,21 @@ button {
   cursor: pointer;
   font-size: 12px;
   font-weight: 600;
-  list-style: none;
 }
-.multi-filter summary::-webkit-details-marker {
-  display: none;
+.multi-filter-trigger:hover,
+.multi-filter-trigger[aria-expanded='true'] {
+  border-color: #9ca3af;
 }
-.multi-filter summary::after {
-  content: '⌄';
-  margin-left: 2px;
+.multi-filter-trigger > svg {
+  width: 14px;
+  height: 14px;
+  margin-left: auto;
+  transition: transform 150ms ease;
 }
-.multi-filter summary > span {
+.multi-filter-trigger[aria-expanded='true'] > svg {
+  transform: rotate(180deg);
+}
+.multi-filter-trigger > span:not(.multi-filter-label) {
   min-width: 18px;
   height: 18px;
   display: grid;
@@ -971,7 +978,7 @@ button {
   color: white;
   font-size: 9px;
 }
-.multi-filter > div {
+.multi-filter-menu {
   position: absolute;
   z-index: 20;
   top: 40px;
@@ -986,7 +993,7 @@ button {
   background: white;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
 }
-.multi-filter label {
+.multi-filter-menu label {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -995,7 +1002,7 @@ button {
   cursor: pointer;
   font-size: 12px;
 }
-.multi-filter label:hover {
+.multi-filter-menu label:hover {
   background: var(--surface);
 }
 .result-count {
