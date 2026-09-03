@@ -481,8 +481,8 @@ button {
   border-bottom: 1px solid var(--line);
 }
 .notification-popover-header > strong {
-  color: #161719;
-  font-size: 14px;
+  color: #000000;
+  font-size: 15px;
 }
 .notification-popover-header > span {
   min-width: 27px;
