@@ -2277,11 +2277,13 @@ function RulesView({
               <span>{rule.description}</span>
             </div>
             <Switch
+              className="rule-switch"
               checked={rule.screen}
               onCheckedChange={() => onToggle(index, 'screen')}
               aria-label={`Notificação em tela: ${rule.title}`}
             />
             <Switch
+              className="rule-switch"
               checked={rule.email}
               onCheckedChange={() => onToggle(index, 'email')}
               aria-label={`E-mail: ${rule.title}`}

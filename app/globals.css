@@ -1826,6 +1826,7 @@ code,
 }
 .rules-header span:nth-child(2),
 .rules-header span:nth-child(3) {
+  justify-self: center;
   text-align: center;
 }
 .rule-row {
@@ -1847,7 +1848,8 @@ code,
   font-size: 12px;
   line-height: 1.5;
 }
-.rule-row > button {
+.rule-switch,
+.rule-row > [data-slot='switch'] {
   justify-self: center;
 }
 .email-preview {
