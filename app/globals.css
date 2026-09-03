@@ -221,19 +221,6 @@ button {
 .nav-item > span:nth-child(2) {
   flex: 1;
 }
-.nav-count {
-  min-width: 20px;
-  border-radius: 999px;
-  padding: 2px 6px;
-  background: var(--surface);
-  color: var(--muted-foreground);
-  font: 600 10px var(--font-geist-mono);
-  text-align: center;
-}
-.nav-count.alert {
-  background: var(--danger-bg);
-  color: var(--danger);
-}
 .sidebar-footer {
   position: relative;
   height: 97px;
@@ -828,8 +815,7 @@ button {
     text-align: center;
   }
   .brand-copy,
-  .nav-item > span:not(.nav-count),
-  .nav-count,
+  .nav-item > span,
   .user-copy,
   .logout-button span {
     display: none;

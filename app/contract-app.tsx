@@ -370,35 +370,18 @@ export default function ContractApp() {
           )}
         </button>
         <nav className="side-nav" aria-label="Navegação principal">
-          {navItems.map(([key, label, Icon]) => {
-            const count =
-              key === 'contracts'
-                ? contractItems.length
-                : key === 'calendar'
-                  ? 4
-                  : key === 'notifications'
-                    ? unread
-                    : 0;
-            return (
-              <button
-                className={`nav-item${navView === key ? ' active' : ''}`}
-                key={key}
-                type="button"
-                title={sidebarCollapsed ? label : undefined}
-                onClick={() => setView(key)}
-              >
-                <Icon aria-hidden="true" />
-                <span>{label}</span>
-                {count > 0 ? (
-                  <span
-                    className={`nav-count${key === 'notifications' ? ' alert' : ''}`}
-                  >
-                    {count}
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
+          {navItems.map(([key, label, Icon]) => (
+            <button
+              className={`nav-item${navView === key ? ' active' : ''}`}
+              key={key}
+              type="button"
+              title={sidebarCollapsed ? label : undefined}
+              onClick={() => setView(key)}
+            >
+              <Icon aria-hidden="true" />
+              <span>{label}</span>
+            </button>
+          ))}
         </nav>
         <div className="sidebar-footer">
           <div className="user-card">
